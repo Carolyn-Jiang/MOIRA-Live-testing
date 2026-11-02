@@ -2,32 +2,111 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": null,
+  "updated_at": "2026-11-02T11:40:19.990381-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
     "final_settlement": "2027-05-24T10:30:00-04:00"
   },
-  "next_release": null,
-  "all_time": {"completed_rounds": 0, "rows": [], "series": []},
+  "next_release": {
+    "timestamp": "2026-11-02T12:30:00-05:00",
+    "session_label": "NYSE regular session",
+    "note": "Next actual observation node; exchange holidays and overnight gaps follow the verified calendar."
+  },
+  "all_time": {
+    "completed_rounds": 0,
+    "rows": [],
+    "series": []
+  },
   "weeks": [
     {
       "week_id": "2026-W45",
-      "label": "2–6 November 2026",
+      "label": "Week of 2026-11-02",
       "start": "2026-11-02T00:00:00-05:00",
       "end": "2026-11-09T00:00:00-05:00",
       "completed_rounds": 0,
       "rows": [],
       "series": [],
       "tokens": [
-        {"model_id":"codex","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
-        {"model_id":"finmem","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
-        {"model_id":"moira","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
-        {"model_id":"moira2-top1","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
-        {"model_id":"moira2-top3","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
-        {"model_id":"moira2-top5","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null}
-      ]
+        {
+          "model_id": "codex",
+          "input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "total_tokens": null,
+          "training_tokens": 0,
+          "inference_tokens": null
+        },
+        {
+          "model_id": "finmem",
+          "input_tokens": 51081,
+          "cached_input_tokens": null,
+          "output_tokens": 500,
+          "total_tokens": 51581,
+          "training_tokens": 0,
+          "inference_tokens": 51581
+        },
+        {
+          "model_id": "moira",
+          "input_tokens": 81552,
+          "cached_input_tokens": 0,
+          "output_tokens": 1058,
+          "total_tokens": 82610,
+          "training_tokens": 0,
+          "inference_tokens": 82610
+        },
+        {
+          "model_id": "moira2-top1",
+          "input_tokens": 13211,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 13211,
+          "training_tokens": 13211,
+          "inference_tokens": 0
+        },
+        {
+          "model_id": "moira2-top3",
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "training_tokens": 0,
+          "inference_tokens": 0
+        },
+        {
+          "model_id": "moira2-top5",
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "training_tokens": 0,
+          "inference_tokens": 0
+        }
+      ],
+      "tokens_coverage": "partial",
+      "shared_tokens": {
+        "input_tokens": 122613,
+        "cached_input_tokens": 0,
+        "output_tokens": 44405,
+        "total_tokens": 167018,
+        "training_tokens": null,
+        "inference_tokens": null
+      },
+      "shared_tokens_coverage": "partial"
     }
   ],
-  "data_status": {"published_batches":0,"expected_release_points":null,"last_release_at":null,"coverage":"pending"}
+  "data_status": {
+    "published_batches": 2,
+    "expected_release_points": 830,
+    "last_release_at": "2026-11-02T10:30:00-05:00",
+    "coverage": "partial"
+  },
+  "budget": {
+    "month": "2026-11",
+    "spent_usd": 0.12181063,
+    "reserved_usd": 0.0,
+    "warning_usd": 20,
+    "limit_usd": 100,
+    "status": "ok"
+  }
 }
