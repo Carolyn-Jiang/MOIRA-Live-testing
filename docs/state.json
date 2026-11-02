@@ -1,0 +1,33 @@
+{
+  "schema": "moira.live-testing.website/1",
+  "status": "pending",
+  "timezone": "America/New_York",
+  "updated_at": null,
+  "period": {
+    "start": "2026-11-02T09:30:00-05:00",
+    "last_release": "2027-05-21T15:30:00-04:00",
+    "final_settlement": "2027-05-24T10:30:00-04:00"
+  },
+  "next_release": null,
+  "all_time": {"completed_rounds": 0, "rows": [], "series": []},
+  "weeks": [
+    {
+      "week_id": "2026-W45",
+      "label": "2–6 November 2026",
+      "start": "2026-11-02T00:00:00-05:00",
+      "end": "2026-11-09T00:00:00-05:00",
+      "completed_rounds": 0,
+      "rows": [],
+      "series": [],
+      "tokens": [
+        {"model_id":"codex","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
+        {"model_id":"finmem","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
+        {"model_id":"moira","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
+        {"model_id":"moira2-top1","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
+        {"model_id":"moira2-top3","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null},
+        {"model_id":"moira2-top5","input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"total_tokens":null,"training_tokens":null,"inference_tokens":null}
+      ]
+    }
+  ],
+  "data_status": {"published_batches":0,"expected_release_points":null,"last_release_at":null,"coverage":"pending"}
+}
