@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "live",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-02T12:50:10.166046-05:00",
+  "updated_at": "2026-11-02T13:07:05.939109-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -315,7 +315,9 @@
           "output_tokens": null,
           "total_tokens": null,
           "training_tokens": 0,
-          "inference_tokens": null
+          "inference_tokens": null,
+          "estimated_cost_usd": 0.11049500000000001,
+          "cost_coverage": "partial"
         },
         {
           "model_id": "finmem",
@@ -324,7 +326,9 @@
           "output_tokens": 912,
           "total_tokens": 109595,
           "training_tokens": 0,
-          "inference_tokens": 109595
+          "inference_tokens": 109595,
+          "estimated_cost_usd": 0.044512550000000005,
+          "cost_coverage": "complete"
         },
         {
           "model_id": "moira",
@@ -333,7 +337,9 @@
           "output_tokens": 1701,
           "total_tokens": 214262,
           "training_tokens": 0,
-          "inference_tokens": 214262
+          "inference_tokens": 214262,
+          "estimated_cost_usd": 0.087746,
+          "cost_coverage": "complete"
         },
         {
           "model_id": "moira2-top1",
@@ -342,7 +348,9 @@
           "output_tokens": null,
           "total_tokens": null,
           "training_tokens": 1997281,
-          "inference_tokens": null
+          "inference_tokens": null,
+          "estimated_cost_usd": 1.12364389,
+          "cost_coverage": "partial"
         },
         {
           "model_id": "moira2-top3",
@@ -351,7 +359,9 @@
           "output_tokens": 64947,
           "total_tokens": 1916327,
           "training_tokens": 1238357,
-          "inference_tokens": 677970
+          "inference_tokens": 677970,
+          "estimated_cost_usd": 0.73400612,
+          "cost_coverage": "complete"
         },
         {
           "model_id": "moira2-top5",
@@ -360,7 +370,9 @@
           "output_tokens": 111113,
           "total_tokens": 3027860,
           "training_tokens": 2432423,
-          "inference_tokens": 595437
+          "inference_tokens": 595437,
+          "estimated_cost_usd": 1.15175432,
+          "cost_coverage": "complete"
         }
       ],
       "tokens_coverage": "partial",

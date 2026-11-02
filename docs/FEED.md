@@ -25,6 +25,8 @@ Each series contains only `{model_id, points}`; each point is exactly `{step, eq
 
 Each week's six token rows contain exactly `model_id`, `input_tokens`, `cached_input_tokens`, `output_tokens`, `total_tokens`, `training_tokens`, `inference_tokens`. Counts are nonnegative safe integers or `null` when unavailable. Input includes cached input; total is input plus output. Training plus inference equals total when all three are known. Imported usage with no source measurements stays unavailable, rather than becoming zero.
 
+Each token row may also contain `estimated_cost_usd` and `cost_coverage` together. A cost is a nonnegative USD estimate or `null`; coverage is `complete`, `partial` or `unavailable`. Estimates aggregate the selected week's model requests, including training, inference and embeddings. Verified fees take priority; unanswered requests retain their conservative reservation. Unpriced historical requests are excluded and mark the subtotal partial. Shared news processing is excluded from each model's cost. The page displays Estimated Cost in place of the Training column; training counters remain internal to token accounting. Budget controls remain active without a public warning banner.
+
 Optional per-week `shared_tokens` contains the same six token counters, without a model ID. Optional `shared_tokens_coverage` is `complete`, `partial` or `unavailable`. This reports common news-processing costs separately; it is never a seventh ranked model or silently charged once to every model.
 
 Optional `data_status` contains exactly `{published_batches, expected_release_points, last_release_at, coverage}`. Expected count and latest timestamp can be `null`; coverage is `pending`, `complete`, `partial` or `unavailable`.
