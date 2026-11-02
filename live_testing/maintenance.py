@@ -18,7 +18,8 @@ from unittest.mock import patch
 from .calendar import DEFAULT_CALENDAR, aware, week_bounds, is_trading_day
 from .registry import TICKERS, TOP_K
 from .storage import read_json, write_private, now, digest, file_hash
-from .training import Observation, Execution, WeeklyDataset
+from .training import Observation, Execution
+from .weekly_dataset import WeeklyDataset
 from .accounting import matured_feedback, risk_metrics
 
 TRAINED_MODELS = ("moira", *TOP_K)
@@ -190,14 +191,37 @@ def _training(runtime, event, directory):
             target = root/"training"/week/model; result = read_json(target/"training-result.json")
             if result is not None:
                 if result.get("training_at") != aware(event.at).isoformat(): raise RuntimeError("Wrong saved weekly result")
+                reviewed = read_json(target/"belief-review"/"review-result.json")
+                proof = result.get("belief_review",{})
+                if (reviewed is None or reviewed.get("status") != "complete"
+                        or reviewed.get("checkpoint_sha256") != digest(reviewed.get("checkpoint"))
+                        or proof.get("report_sha256") != digest(reviewed)
+                        or proof.get("checkpoint_sha256") != digest(reviewed.get("checkpoint"))
+                        or proof.get("completed_before_training") is not True):
+                    raise RuntimeError("Saved weekly training lacks its completed belief-review proof")
                 return result
             attempt = target/"maintenance-attempt.json"
             if read_json(attempt) is not None: raise RuntimeError("Ambiguous prior training attempt; no duplicate paid calls")
             prepared = copy.deepcopy(read_json(root/"models"/model/"prepared.json"))
-            prepared["pair_memory"] = copy.deepcopy(read_json(root/"models"/model/"live-state.json")["pair_memory"])
+            live_state = read_json(root/"models"/model/"live-state.json")
+            prepared["pair_memory"] = copy.deepcopy(live_state["pair_memory"])
             write_private(attempt,{"status":"started","source_sha256":marker["source_sha256"],"started_at":now()})
-            return moira_native.train_week(dataset,prepared,bundle,target,
-                runtime.gateway.scoped(model,"training",event.id),model,max_cycles=8)
+            from .belief_review import review_weekly_beliefs
+            gateway = runtime.gateway.scoped(model,"training",event.id)
+            reviewed = review_weekly_beliefs(dataset,prepared,bundle,target/"belief-review",gateway,model,
+                live_state=live_state,live_decisions=copy.deepcopy(runtime.book["decisions"][model]))
+            if reviewed.get("status") != "complete" or not isinstance(reviewed.get("checkpoint"),dict):
+                raise RuntimeError("Weekly belief review must complete before native training")
+            if (read_json(target/"belief-review"/"review-result.json") != reviewed
+                    or reviewed.get("checkpoint_sha256") != digest(reviewed["checkpoint"])):
+                raise RuntimeError("Completed belief-review checkpoint must match its persisted audit")
+            write_private(attempt,{"status":"native_training_started","source_sha256":marker["source_sha256"],
+                "belief_review_sha256":digest(reviewed),"started_at":now()})
+            result = moira_native.train_week(dataset,reviewed["checkpoint"],bundle,target,gateway,model,max_cycles=8)
+            result["belief_review"] = {"report_sha256":digest(reviewed),
+                "checkpoint_sha256":digest(reviewed["checkpoint"]),"completed_before_training":True}
+            write_private(target/"training-result.json",result)
+            return result
         with ThreadPoolExecutor(max_workers=4) as pool:
             futures = {pool.submit(train,model):model for model in TRAINED_MODELS}
             for future in as_completed(futures):

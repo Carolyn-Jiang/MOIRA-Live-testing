@@ -12,7 +12,7 @@ from live_testing import maintenance as m
 from live_testing.calendar import DEFAULT_CALENDAR as C,NY,ScheduledEvent
 from live_testing.accounting import new_book,record_valuation
 from live_testing.registry import MODEL_IDS,TICKERS
-from live_testing.storage import write_private,read_json,file_hash
+from live_testing.storage import write_private,read_json,file_hash,digest
 
 
 def when(day,hour,minute=0):return datetime.fromisoformat(f'{day}T{hour:02d}:{minute:02d}:00').replace(tzinfo=NY)
@@ -47,6 +47,12 @@ def publish(runtime,at):
 
 
 def _name(at):return at.strftime('%Y-%m-%d_%H-%M_NY')
+
+
+def reviewed_checkpoint(directory,checkpoint):
+    result={'status':'complete','checkpoint':copy.deepcopy(checkpoint),'checkpoint_sha256':digest(checkpoint)}
+    write_private(Path(directory)/'review-result.json',result)
+    return result
 
 
 def initialize_models(root):
@@ -130,6 +136,86 @@ class MaintenanceTests(unittest.TestCase):
             result=m.run_maintenance(self.runtime,e)
         self.assertEqual(result['status'],'pending');summary.assert_not_called()
         self.assertEqual({str(path):path.read_bytes() for path in (self.root/'models').rglob('*.json')},before)
+
+    def test_each_version_reviews_beliefs_before_training_from_reviewed_checkpoint(self):
+        initialize_models(self.root)
+        for at in C.release_nodes[:30]:publish(self.runtime,at)
+        e=event('2026-11-09',8,'training');reviewed=set();trained=set();guard=threading.Lock()
+        def review(dataset,prepared,bundle,directory,gateway,model_id,*,live_state,live_decisions):
+            self.assertEqual(gateway.label[:2],(model_id,'training'))
+            self.assertEqual(live_state['pair_memory'],[{'live':model_id}])
+            self.assertEqual(live_decisions,{})
+            checkpoint=copy.deepcopy(prepared);text='Reviewed belief '+model_id
+            checkpoint['prompt_memory']['active_prompt']=text
+            checkpoint['frozen_prompt_sha256']=hashlib.sha256(text.encode()).hexdigest()
+            with guard:reviewed.add(model_id)
+            return reviewed_checkpoint(directory,checkpoint)
+        def train(dataset,prepared,bundle,directory,gateway,model,max_cycles):
+            with guard:self.assertIn(model,reviewed);trained.add(model)
+            self.assertEqual(max_cycles,8)
+            self.assertEqual(prepared['prompt_memory']['active_prompt'],'Reviewed belief '+model)
+            return {'checkpoint':prepared,'training_at':e.at.isoformat()}
+        with patch.object(m,'now',return_value=e.at.isoformat()),patch('live_testing.belief_review.review_weekly_beliefs',side_effect=review),patch('live_testing.moira_native.train_week',side_effect=train),patch.object(m,'_company_context',return_value={'generated_at':e.at.isoformat()}):
+            result=m.run_maintenance(self.runtime,e)
+        self.assertEqual(result['status'],'completed')
+        self.assertEqual(reviewed,set(m.TRAINED_MODELS));self.assertEqual(trained,reviewed)
+        for model in reviewed:
+            saved=read_json(self.root/'training'/'2026-W46'/model/'training-result.json')
+            self.assertTrue(saved['belief_review']['completed_before_training'])
+
+    def test_failed_review_blocks_its_training_and_all_live_installation(self):
+        initialize_models(self.root)
+        for at in C.release_nodes[:30]:publish(self.runtime,at)
+        e=event('2026-11-09',8,'training');trained=[]
+        before={str(path):path.read_bytes() for path in (self.root/'models').rglob('*.json')}
+        def review(dataset,prepared,bundle,directory,gateway,model_id,**kwargs):
+            if model_id=='moira2-top3':raise RuntimeError('Synthetic ambiguous review')
+            return reviewed_checkpoint(directory,prepared)
+        def train(dataset,prepared,bundle,directory,gateway,model,max_cycles):
+            trained.append(model);return {'checkpoint':prepared,'training_at':e.at.isoformat()}
+        with patch.object(m,'now',return_value=e.at.isoformat()),patch('live_testing.belief_review.review_weekly_beliefs',side_effect=review),patch('live_testing.moira_native.train_week',side_effect=train),patch.object(m,'_company_context') as summary:
+            result=m.run_maintenance(self.runtime,e)
+        self.assertEqual(result['status'],'pending');self.assertNotIn('moira2-top3',trained)
+        summary.assert_not_called()
+        self.assertEqual({str(path):path.read_bytes() for path in (self.root/'models').rglob('*.json')},before)
+
+    def test_holiday_monday_training_runs_tuesday_with_same_previous_week(self):
+        initialize_models(self.root)
+        for at in C.release_nodes:
+            if at.date().isoformat()>='2027-01-11' and at.date().isoformat()<='2027-01-15':publish(self.runtime,at)
+        e=event('2027-01-19',8,'training');seen=[]
+        def review(dataset,prepared,bundle,directory,gateway,model_id,**kwargs):
+            self.assertEqual(dataset.training_at,e.at)
+            self.assertEqual(len(dataset.observations),30)
+            self.assertTrue(all('2027-01-11'<=row.timestamp.date().isoformat()<='2027-01-15' for row in dataset.observations))
+            seen.append(model_id);return reviewed_checkpoint(directory,prepared)
+        def train(dataset,prepared,bundle,directory,gateway,model,max_cycles):
+            return {'checkpoint':prepared,'training_at':e.at.isoformat()}
+        with patch.object(m,'now',return_value=e.at.isoformat()),patch('live_testing.belief_review.review_weekly_beliefs',side_effect=review),patch('live_testing.moira_native.train_week',side_effect=train),patch.object(m,'_company_context',return_value={'generated_at':e.at.isoformat()}):
+            result=m.run_maintenance(self.runtime,e)
+        self.assertEqual(result['status'],'completed');self.assertEqual(set(seen),set(m.TRAINED_MODELS))
+        self.assertEqual(result['matured_labels'],28);self.assertEqual(result['pending_labels'],2)
+
+    def test_unpersisted_belief_review_cannot_start_any_native_training(self):
+        initialize_models(self.root)
+        for at in C.release_nodes[:30]:publish(self.runtime,at)
+        e=event('2026-11-09',8,'training')
+        def review(dataset,prepared,*args,**kwargs):
+            return {'status':'complete','checkpoint':prepared,'checkpoint_sha256':digest(prepared)}
+        with patch.object(m,'now',return_value=e.at.isoformat()),patch('live_testing.belief_review.review_weekly_beliefs',side_effect=review),patch('live_testing.moira_native.train_week') as train,patch.object(m,'_company_context') as summary:
+            result=m.run_maintenance(self.runtime,e)
+        self.assertEqual(result['status'],'pending');train.assert_not_called();summary.assert_not_called()
+
+    def test_saved_training_without_completed_review_proof_is_rejected(self):
+        initialize_models(self.root)
+        for at in C.release_nodes[:30]:publish(self.runtime,at)
+        e=event('2026-11-09',8,'training')
+        for model in m.TRAINED_MODELS:
+            write_private(self.root/'training'/'2026-W46'/model/'training-result.json',
+                {'training_at':e.at.isoformat(),'checkpoint':read_json(self.root/'models'/model/'prepared.json')})
+        with patch.object(m,'now',return_value=e.at.isoformat()),patch('live_testing.belief_review.review_weekly_beliefs') as review,patch('live_testing.moira_native.train_week') as train,patch.object(m,'_company_context') as summary:
+            result=m.run_maintenance(self.runtime,e)
+        self.assertEqual(result['status'],'pending');review.assert_not_called();train.assert_not_called();summary.assert_not_called()
 
     def test_halfday_friday_reselection_has_no_trade_and_retains_old_epoch(self):
         e=event('2026-11-27',16,'pair_reselection');publish(self.runtime,when('2026-11-27',12,30));old=self.root/'models/finmem/epochs/old'

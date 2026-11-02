@@ -2,7 +2,8 @@ import unittest
 from datetime import date, datetime, timedelta, timezone
 
 from live_testing.calendar import (DEFAULT_CALENDAR as C, NY, LONDON, FULL_HOLIDAYS,
-    HALF_DAYS, START_AT, FINAL_EXIT_AT, session_nodes, week_bounds, month_bounds)
+    HALF_DAYS, START_AT, FINAL_EXIT_AT, session_nodes, week_bounds, month_bounds,
+    weekly_training_day, is_weekly_training_time)
 
 
 def at(day, hour, minute=30):
@@ -50,11 +51,28 @@ class CalendarTests(unittest.TestCase):
         for d,h,ed,eh,xd,xh in cases:
             w=C.action_window(at(d,h));self.assertEqual((w.entry_at,w.exit_at),(at(ed,eh),at(xd,xh)))
 
-    def test_first_training_is_november9_and_holiday_monday_skipped(self):
+    def test_first_training_is_november9_and_holiday_monday_moves_to_tuesday(self):
         training=[e.at for e in C.events() if e.kind=="training"]
         self.assertEqual(training[0],at("2026-11-09",8,0))
-        self.assertNotIn(at("2027-01-18",8,0),training)
+        self.assertEqual(len(training),28)
+        self.assertEqual(len({value.isocalendar()[:2] for value in training}),len(training))
+        for closed, fallback in [("2027-01-18","2027-01-19"),("2027-02-15","2027-02-16")]:
+            self.assertNotIn(at(closed,8,0),training)
+            self.assertIn(at(fallback,8,0),training)
+            self.assertEqual(weekly_training_day(date.fromisoformat(closed)),date.fromisoformat(fallback))
         self.assertFalse(any(e.at> C.last_release_at and e.kind in {"training","pair_reselection","cache"} for e in C.events()))
+
+    def test_weekly_slot_has_no_normal_tuesday_duplicate_and_keeps_dst(self):
+        training={e.at for e in C.events() if e.kind=="training"}
+        for day in ("2026-11-10","2027-01-12","2027-02-09","2027-03-16"):
+            self.assertFalse(is_weekly_training_time(at(day,8,0)))
+            self.assertNotIn(at(day,8,0),training)
+        for day,hour in [("2027-01-19",13),("2027-02-16",13),("2027-03-08",13),("2027-03-15",12)]:
+            slot=at(day,8,0);self.assertTrue(is_weekly_training_time(slot))
+            self.assertEqual(slot.astimezone(timezone.utc).hour,hour)
+        self.assertFalse(is_weekly_training_time(at("2026-11-02",8,0)))
+        self.assertFalse(is_weekly_training_time(at("2027-05-24",8,0)))
+        self.assertFalse(is_weekly_training_time(at("2027-01-19",8,1)))
 
     def test_cache_may_run_on_sunday_and_exception_saturday(self):
         cache={e.at for e in C.events() if e.kind=="cache"}

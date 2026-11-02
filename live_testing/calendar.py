@@ -38,6 +38,29 @@ def is_trading_day(day: date) -> bool:
     return day.weekday() < 5 and day not in FULL_HOLIDAYS
 
 
+def weekly_training_day(day: date) -> date | None:
+    """This NY ISO week's Monday, or Tuesday only when Monday is closed.
+
+    A Tuesday fallback never shifts the observation window: its source week
+    remains the preceding Monday through Sunday. There is no Wednesday fallback.
+    """
+    if not isinstance(day, date) or isinstance(day, datetime):
+        raise ValueError("An explicit New York calendar date is required")
+    monday = day-timedelta(days=day.weekday())
+    if is_trading_day(monday):
+        return monday
+    tuesday = monday+timedelta(days=1)
+    return tuesday if is_trading_day(tuesday) else None
+
+
+def is_weekly_training_time(at: datetime | str) -> bool:
+    """Exact bounded 08:00 NY weekly slot, including holiday-Monday fallback."""
+    local = aware(at)
+    return (START_AT <= local < LAST_RELEASE_AT
+            and (local.hour, local.minute, local.second, local.microsecond) == (8, 0, 0, 0)
+            and local.date() == weekly_training_day(local.date()))
+
+
 def session_nodes(day: date) -> tuple[datetime, ...]:
     if not is_trading_day(day):
         return ()
@@ -143,7 +166,7 @@ class ExperimentCalendar:
             day = self.start_at.date()
             while day <= self.last_release_at.date():
                 specifications = []
-                if day.weekday() == 0 and is_trading_day(day):
+                if day == weekly_training_day(day):
                     specifications.append(("training", time(8)))
                 if day.weekday() == 4 and is_trading_day(day):
                     specifications.append(("pair_reselection", time(16)))

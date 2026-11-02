@@ -17,7 +17,14 @@ publication occurs in this job. A missing last published observation stays
 pending rather than inventing a news window. Yahoo/network collection happens
 only when the future job is explicitly dispatched; all unit tests inject it.
 
-## Monday 08:00 training
+## Weekly 08:00 belief review and training
+
+The normal slot is Monday 08:00 New York. When Monday is a full market holiday,
+the slot moves to Tuesday 08:00 of that same week, provided Tuesday is a trading
+day. A normal Tuesday does not trigger a second job. In this experiment the
+holiday fallbacks are January 19 and February 16, 2027. The source window always
+remains the preceding New York Monday through Sunday; the actual Monday or
+Tuesday 08:00 determines which outcomes and sources are available.
 
 Only published observations from the previous New York calendar week are used.
 Canonical next-node entry/following-node exit labels come exclusively from the
@@ -27,7 +34,26 @@ actions, remain pending and cannot be graded as zero. No observations or no
 known labels yields a pending job, not a successful training claim.
 
 Original Moira and the three independent Top-K settings train in four isolated
-directories with up to four concurrent workers. Every version runs its real
+directories with up to four concurrent workers. Each version first reviews its
+genuinely accepted prior-week actions, including explicitly authorized preparation
+replays with their original mode and generation times preserved. Only finalized
+losses or counterfactual regret can become failed cases. Evidence links the
+existing active learned belief, actual decision rationale and dated prompt
+provenance; a loss alone does not establish that a belief caused it.
+
+A budgeted reviewer may retain, revise or delete an existing belief, citing real
+failed-case evidence. Transferable revisions pass the native sanitizer. Before a
+revision becomes the new training seed, separate native episodes compare the old
+and proposed beliefs on the same causal observations and immutable delayed
+prices. Acceptance requires a strict finite sample-Sharpe improvement and a
+changed decision that improves a cited failed case. These are historical replay
+checks, not proof of causal attribution or out-of-sample improvement. Rejected
+proposals retain the original beliefs. Deleted active beliefs cannot silently
+reactivate older hidden lessons. Private audit records retain the original
+checkpoint, changes, evidence and validation metrics. Incomplete or ambiguous
+review blocks the affected training instead of silently bypassing the review.
+
+After its review completes, every version runs its real
 native-component trainer for at most eight cycles with sample-Sharpe selection.
 All four must succeed before learned prompts and pair memory are installed.
 Live active pairs, decisions, attempts, history, feedback, the live memory bank
