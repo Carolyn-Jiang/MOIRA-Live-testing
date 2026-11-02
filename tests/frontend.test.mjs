@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MODEL_REGISTRY,PERIOD,feedUrl,validateState,validateView,validateTokens,validateSharedTokens,metrics,rankRows,formatReturn,formatSharpe,formatDrawdown,formatTokens,formatEstimatedCost,formatNY,createDashboard} from '../docs/app.js';
+import {MODEL_REGISTRY,PERIOD,feedUrl,validateState,validateView,validateTokens,validateSharedTokens,metrics,rankRows,formatReturn,formatSharpe,formatDrawdown,formatTokens,formatTokenField,formatEstimatedCost,formatNY,createDashboard} from '../docs/app.js';
 
 const initial=()=>({schema:'moira.live-testing.website/1',status:'pending',timezone:'America/New_York',updated_at:null,
   period:structuredClone(PERIOD),next_release:null,all_time:{completed_rounds:0,rows:[],series:[]},
@@ -27,6 +27,54 @@ test('weekly views are independent, rebase paths to one, and must cover total co
 test('constant positive returns use the same floating-point zero-volatility threshold as the scorer',()=>{const points=[1,1.01,1.0201,1.030301].map((equity,step)=>({step,equity}));assert.equal(metrics(points).sharpe_ratio,null);assert.equal(metrics(points).max_drawdown,0);const view={completed_rounds:3,rows:MODEL_REGISTRY.map(model=>({model_id:model.id,...metrics(points)})),series:MODEL_REGISTRY.map(model=>({model_id:model.id,points:structuredClone(points)}))};assert.doesNotThrow(()=>validateView(view))});
 
 test('weekly token counts distinguish unavailable from measured zero, enforce accounting and retain partial imports',()=>{const state=verified();assert.doesNotThrow(()=>validateTokens(state.weeks[0].tokens));assert.equal(formatTokens(null),'Unavailable');assert.equal(formatTokens(0),'0');assert.equal(formatTokens(20000),'20,000');for(const edit of [rows=>rows[1].cached_input_tokens=121,rows=>rows[1].total_tokens=151,rows=>rows[1].training_tokens=1,rows=>rows[1].input_tokens=-1,rows=>rows[1].model_id='codex']){const rows=structuredClone(state.weeks[0].tokens);edit(rows);assert.throws(()=>validateTokens(rows))}state.weeks[0].tokens_coverage='partial';assert.doesNotThrow(()=>validateState(state))});
+
+const tokenFields=['input_tokens','cached_input_tokens','output_tokens','total_tokens','training_tokens','inference_tokens'];
+function tokenMetadata(row){row.recorded_tokens=Object.fromEntries(tokenFields.map(field=>[field,row[field]]));row.token_coverage=Object.fromEntries(tokenFields.map(field=>[field,row[field]===null?'unavailable':'complete']));return row}
+function partialUsage(){const state=verified(),row=tokenMetadata(state.weeks[0].tokens[0]);for(const[field,value]of Object.entries({input_tokens:12345,cached_input_tokens:0,total_tokens:13000,inference_tokens:13000})){row.recorded_tokens[field]=value;row.token_coverage[field]='partial'}tokenMetadata(state.weeks[0].tokens[1]);return state}
+
+test('recorded token metadata distinguishes exact totals, lower bounds and genuinely unavailable fields',()=>{
+  const state=partialUsage(),rows=state.weeks[0].tokens;
+  assert.doesNotThrow(()=>validateState(state));assert.equal(formatTokenField(rows[0],'input_tokens'),'≥12,345');
+  assert.equal(formatTokenField(rows[0],'cached_input_tokens'),'≥0');assert.equal(formatTokenField(rows[0],'output_tokens'),'Unavailable');
+  assert.equal(formatTokenField(rows[1],'input_tokens'),'120');assert.equal(formatTokenField(rows[1],'training_tokens'),'0');
+  assert.equal(rows[0].input_tokens,null);assert.equal(rows[0].total_tokens,null);
+  // Recorded fields can cover different request subsets; complete totals keep
+  // their original arithmetic checks instead of equating partial subtotals.
+  rows[0].recorded_tokens.output_tokens=900;rows[0].token_coverage.output_tokens='partial';
+  assert.doesNotThrow(()=>validateTokens(rows));
+  rows[1].total_tokens=151;rows[1].recorded_tokens.total_tokens=151;
+  assert.throws(()=>validateTokens(rows));
+});
+
+test('recorded token metadata rejects mismatched completeness, unsafe counts and private or missing fields',()=>{
+  for(const edit of [rows=>delete rows[0].recorded_tokens,rows=>delete rows[0].token_coverage,
+    rows=>delete rows[0].recorded_tokens.output_tokens,rows=>rows[0].recorded_tokens.prompt='private',
+    rows=>rows[0].token_coverage.response_id='private',rows=>rows[0].token_coverage.input_tokens='estimated',
+    rows=>rows[0].recorded_tokens.input_tokens=-1,rows=>rows[0].recorded_tokens.input_tokens=Number.MAX_SAFE_INTEGER+1,
+    rows=>rows[0].recorded_tokens.input_tokens=NaN,rows=>rows[0].recorded_tokens.input_tokens=null,
+    rows=>rows[0].input_tokens=12345,rows=>rows[0].recorded_tokens.output_tokens=1,
+    rows=>rows[0].token_coverage.input_tokens='complete',rows=>rows[1].recorded_tokens.input_tokens=121,
+    rows=>rows[1].token_coverage.input_tokens='unavailable']){
+    const rows=partialUsage().weeks[0].tokens;edit(rows);assert.throws(()=>validateTokens(rows));
+  }
+});
+
+test('usage cells disclose recorded lower bounds accessibly without changing costs, rankings or paths',()=>{
+  const state=partialUsage(),before=structuredClone(state.all_time),{nodes,document}=fakeDocument();
+  createDashboard(document).render(state);const cells=nodes.get('token-usage').children[0].children;
+  assert.equal(cells[1].textContent,'≥12,345');assert.equal(cells[2].textContent,'≥0');assert.equal(cells[3].textContent,'Unavailable');
+  assert.equal(cells[1].attributes.title,'Recorded subtotal; some provider usage is unavailable.');
+  assert.match(cells[1].attributes['aria-label'],/≥12,345.*Recorded subtotal/);assert.match(cells[1].className,/token-partial/);
+  assert.equal(nodes.get('token-usage').children[1].children[1].textContent,'120');
+  assert.equal(nodes.get('token-usage').children[1].children[6].textContent,'~$0.01');
+  assert.deepEqual(state.all_time,before);assert.equal(nodes.get('return-chart').children[0].children.filter(n=>n.tagName==='polyline').length,6);
+  const onlyPartial=initial();onlyPartial.weeks[0].tokens[0]=state.weeks[0].tokens[0];onlyPartial.weeks[0].tokens_coverage='partial';
+  createDashboard(document).render(onlyPartial);assert.match(nodes.get('usage-status').textContent,/partial coverage/);
+  assert.equal(nodes.get('rankings').children[0].children[2].textContent,'Awaiting data');
+  const html=readFileSync(new URL('../docs/index.html',import.meta.url),'utf8');
+  assert.match(html,/≥ denotes a recorded lower bound/);assert.match(html,/\* Cost estimate based on available records/);
+  assert.match(html,/app\.js\?v=20261102-recorded-usage/);assert.ok(!/id="budget-status"|\$20|\$100/.test(html));
+});
 
 test('budget is a NY month aggregate with fixed warning and hard stop, never inferred zero',()=>{assert.doesNotThrow(()=>validateState(verified()));for(const edit of [s=>s.budget.spent_usd=-1,s=>s.budget.limit_usd=200,s=>s.budget.reserved_usd=NaN,s=>s.budget.token='secret']){const state=verified();edit(state);assert.throws(()=>validateState(state))}const state=initial();state.budget={month:'2026-11',spent_usd:null,reserved_usd:null,warning_usd:20,limit_usd:100,status:'unavailable'};assert.doesNotThrow(()=>validateState(state))});
 

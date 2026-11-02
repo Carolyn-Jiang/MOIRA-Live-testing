@@ -121,6 +121,35 @@ def _token_totals(rows, *, evidence_available):
     return result
 
 
+def _recorded_tokens(rows, *, evidence_available):
+    """Measured lower bounds alongside the unchanged complete-total fields.
+
+    An unanswered call contributes no invented tokens. A recorded numeric zero
+    is retained, while an entirely unmeasured field remains unavailable.
+    """
+    stages = {"training_tokens": {"training", "warmup"},
+              "inference_tokens": {"inference", "selection", "replay", "backtest", "evaluation", "data_summary"}}
+    unknown_stage = any(row["stage"] not in stages["training_tokens"] | stages["inference_tokens"] for row in rows)
+    recorded, coverage = {}, {}
+    for field in TOKEN_FIELDS:
+        if field in stages:
+            values = [row["total_tokens"] for row in rows if row["stage"] in stages[field]]
+            uncertain = unknown_stage
+        else:
+            values = [row[field] for row in rows]
+            uncertain = False
+        known = [value for value in values if value is not None]
+        if not values and not uncertain:
+            recorded[field] = 0 if evidence_available else None
+            coverage[field] = "complete" if evidence_available else "unavailable"
+        elif not known:
+            recorded[field], coverage[field] = None, "unavailable"
+        else:
+            recorded[field] = _count(sum(known))
+            coverage[field] = "complete" if not uncertain and len(known) == len(values) else "partial"
+    return {"recorded_tokens": recorded, "token_coverage": coverage}
+
+
 def _cost_totals(rows, *, evidence_available):
     if not rows:
         return {"estimated_cost_usd": 0.0 if evidence_available else None,
@@ -133,8 +162,10 @@ def _cost_totals(rows, *, evidence_available):
 
 
 def _coverage(rows):
-    values = [row[field] for row in rows for field in TOKEN_FIELDS]
-    return "complete" if all(value is not None for value in values) else "unavailable" if all(value is None for value in values) else "partial"
+    values = [row["token_coverage"][field] if "token_coverage" in row
+              else "complete" if row[field] is not None else "unavailable"
+              for row in rows for field in TOKEN_FIELDS]
+    return "complete" if all(value == "complete" for value in values) else "unavailable" if all(value == "unavailable" for value in values) else "partial"
 
 
 def _view(histories, indices):
@@ -241,6 +272,7 @@ def build_feed(book, *, calendar=DEFAULT_CALENDAR, budget_ledger=None,
         for model in MODEL_IDS:
             model_calls = [row for row in scoped if row["model_id"] == model]
             tokens.append({"model_id": model, **_token_totals(model_calls,
+                evidence_available=budget_ledger is not None), **_recorded_tokens(model_calls,
                 evidence_available=budget_ledger is not None), **_cost_totals(model_calls,
                 evidence_available=budget_ledger is not None)})
         shared = _token_totals([row for row in scoped if row["model_id"] in SHARED_IDS],
