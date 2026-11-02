@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-02T12:34:54.171938-05:00",
+  "updated_at": "2026-11-02T12:41:27.704198-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -57,30 +57,30 @@
         },
         {
           "model_id": "moira2-top1",
-          "input_tokens": 1879891,
-          "cached_input_tokens": 316288,
-          "output_tokens": 117390,
-          "total_tokens": 1997281,
+          "input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "total_tokens": null,
           "training_tokens": 1997281,
-          "inference_tokens": 0
+          "inference_tokens": null
         },
         {
           "model_id": "moira2-top3",
-          "input_tokens": 1174896,
+          "input_tokens": 1513648,
           "cached_input_tokens": 159616,
-          "output_tokens": 63461,
-          "total_tokens": 1238357,
+          "output_tokens": 63883,
+          "total_tokens": 1577531,
           "training_tokens": 1238357,
-          "inference_tokens": 0
+          "inference_tokens": 339174
         },
         {
           "model_id": "moira2-top5",
-          "input_tokens": 2322680,
+          "input_tokens": 2584360,
           "cached_input_tokens": 276224,
-          "output_tokens": 109743,
-          "total_tokens": 2432423,
+          "output_tokens": 110158,
+          "total_tokens": 2694518,
           "training_tokens": 2432423,
-          "inference_tokens": 0
+          "inference_tokens": 262095
         }
       ],
       "tokens_coverage": "partial",
@@ -103,8 +103,8 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 2.53977722,
-    "reserved_usd": 0.0,
+    "spent_usd": 2.75990468,
+    "reserved_usd": 0.14848799999999995,
     "warning_usd": 20,
     "limit_usd": 100,
     "status": "ok"
