@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-02T11:40:19.990381-05:00",
+  "updated_at": "2026-11-02T11:48:18.991829-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -39,72 +39,72 @@
         },
         {
           "model_id": "finmem",
-          "input_tokens": 51081,
+          "input_tokens": 58986,
           "cached_input_tokens": null,
-          "output_tokens": 500,
-          "total_tokens": 51581,
+          "output_tokens": 683,
+          "total_tokens": 59669,
           "training_tokens": 0,
-          "inference_tokens": 51581
+          "inference_tokens": 59669
         },
         {
           "model_id": "moira",
-          "input_tokens": 81552,
+          "input_tokens": 104335,
           "cached_input_tokens": 0,
-          "output_tokens": 1058,
-          "total_tokens": 82610,
+          "output_tokens": 1381,
+          "total_tokens": 105716,
           "training_tokens": 0,
-          "inference_tokens": 82610
+          "inference_tokens": 105716
         },
         {
           "model_id": "moira2-top1",
-          "input_tokens": 13211,
-          "cached_input_tokens": 0,
-          "output_tokens": 0,
-          "total_tokens": 13211,
-          "training_tokens": 13211,
+          "input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "total_tokens": null,
+          "training_tokens": null,
           "inference_tokens": 0
         },
         {
           "model_id": "moira2-top3",
-          "input_tokens": 0,
-          "cached_input_tokens": 0,
-          "output_tokens": 0,
-          "total_tokens": 0,
-          "training_tokens": 0,
+          "input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "total_tokens": null,
+          "training_tokens": null,
           "inference_tokens": 0
         },
         {
           "model_id": "moira2-top5",
-          "input_tokens": 0,
-          "cached_input_tokens": 0,
-          "output_tokens": 0,
-          "total_tokens": 0,
-          "training_tokens": 0,
+          "input_tokens": null,
+          "cached_input_tokens": null,
+          "output_tokens": null,
+          "total_tokens": null,
+          "training_tokens": null,
           "inference_tokens": 0
         }
       ],
       "tokens_coverage": "partial",
       "shared_tokens": {
-        "input_tokens": 122613,
+        "input_tokens": 129155,
         "cached_input_tokens": 0,
-        "output_tokens": 44405,
-        "total_tokens": 167018,
-        "training_tokens": null,
-        "inference_tokens": null
+        "output_tokens": 46563,
+        "total_tokens": 175718,
+        "training_tokens": 0,
+        "inference_tokens": 175718
       },
-      "shared_tokens_coverage": "partial"
+      "shared_tokens_coverage": "complete"
     }
   ],
   "data_status": {
-    "published_batches": 2,
+    "published_batches": 3,
     "expected_release_points": 830,
-    "last_release_at": "2026-11-02T10:30:00-05:00",
+    "last_release_at": "2026-11-02T11:30:00-05:00",
     "coverage": "partial"
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 0.12181063,
-    "reserved_usd": 0.0,
+    "spent_usd": 0.53129261,
+    "reserved_usd": 0.025923599999999936,
     "warning_usd": 20,
     "limit_usd": 100,
     "status": "ok"
