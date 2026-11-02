@@ -107,6 +107,27 @@ class InitialInstallTests(unittest.TestCase):
         bundle,results,proof=installer.validate_staged_results(self.root,self.stage)
         self.assertEqual(len(proof),32);self.assertEqual(set(results),set(TOP_K));self.assertEqual(bundle,self.bundle)
 
+    def test_explicit_mixed_recovery_directories_keep_all_sources_exact(self):
+        resumed=self.stage.with_name('resumed')
+        resumed.mkdir()
+        mapping={model:self.stage/model for model in TOP_K}
+        for model in ['moira2-top1','moira2-top3']:
+            (self.stage/model).rename(resumed/model);mapping[model]=resumed/model
+        before={model:tree(directory) for model,directory in mapping.items()}
+        with patch('live_testing.moira_native.initialize',side_effect=self.initialize):
+            result=installer.install_initial_training(self.root,mapping)
+        self.assertEqual(result['source_directories'],{model:str(directory) for model,directory in mapping.items()})
+        self.assertEqual({model:tree(directory) for model,directory in mapping.items()},before)
+        self.assertTrue(result['all_original_state_preserved'])
+
+    def test_source_mapping_rejects_partial_duplicate_or_cross_variant_directories(self):
+        mapping={model:self.stage/model for model in TOP_K}
+        with self.assertRaises(ValueError):installer.validate_staged_results(self.root,{'moira2-top1':mapping['moira2-top1']})
+        duplicate={model:mapping['moira2-top1'] for model in TOP_K}
+        with self.assertRaises(ValueError):installer.validate_staged_results(self.root,duplicate)
+        mapping['moira2-top1'],mapping['moira2-top3']=mapping['moira2-top3'],mapping['moira2-top1']
+        with self.assertRaises(ValueError):installer.validate_staged_results(self.root,mapping)
+
     def test_three_model_atomic_install_preserves_originals_and_trained_weights(self):
         protected=installer._preserved(self.root);old={model:tree(self.root/'models'/model) for model in TOP_K};staged_before=tree(self.stage)
         result=self.install();self.assertEqual(result['status'],'ready');self.assertEqual(installer._preserved(self.root),protected)

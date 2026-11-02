@@ -9,7 +9,8 @@ from .calendar import DEFAULT_CALENDAR,aware
 from .accounting import record_decision,record_valuation,settle_due,matured_feedback
 from .storage import read_json,write_private,locked,now,digest,file_hash
 from .budget import Budget
-from .llm import Gateway,read_settings
+from .llm import read_settings
+from .native_output_guard import create_guarded_gateway
 from .data import collect_release,publish,observation,prices,release_id,round_id
 from .projection import build_feed
 from .site_publish import publish_feed
@@ -31,7 +32,7 @@ class Runtime:
     def gateway(self):
         if self._gateway is None:
             key=read_settings(self.config['key_file'])['OPENAI_API_KEY']
-            self._gateway=Gateway(key,Budget(self.root),self.root/'api-audit')
+            self._gateway=create_guarded_gateway(key,Budget(self.root),self.root/'api-audit')
         return self._gateway
     def save(self):
         write_private(self.root/'book.json',self.book);write_private(self.root/'runtime.json',self.state)
@@ -191,15 +192,19 @@ def dispatch(root,*,wait_until_due=False,event_kinds=None):
     due=[event for event in DEFAULT_CALENDAR.due_events(clock(),completed_ids=state['completed_events']) if event.kind in kinds]
     if not due:
         if state.get('website_pending'):
-            with locked(Path(root)/'run.lock',nonblocking=True):return Runtime(root).recover_website()
+            try:
+                with locked(Path(root)/'run.lock',nonblocking=True):return Runtime(root).recover_website()
+            except BlockingIOError:return {'status':'already_running'}
         return {'status':'not_due'}
-    with locked(Path(root)/'run.lock',nonblocking=True):
-        runtime=Runtime(root);results=[]
-        for event in due:
-            if event.id in runtime.state['completed_events']:continue
-            if event.kind=='release':results.append(runtime.release(event.at))
-            elif event.kind=='valuation':results.append(runtime.valuation(event.at))
-            else:
-                from .maintenance import run_maintenance
-                results.append(run_maintenance(runtime,event))
-        return {'status':'processed','results':results,'budget':Budget(root).summary()}
+    try:
+        with locked(Path(root)/'run.lock',nonblocking=True):
+            runtime=Runtime(root);results=[]
+            for event in due:
+                if event.id in runtime.state['completed_events']:continue
+                if event.kind=='release':results.append(runtime.release(event.at))
+                elif event.kind=='valuation':results.append(runtime.valuation(event.at))
+                else:
+                    from .maintenance import run_maintenance
+                    results.append(run_maintenance(runtime,event))
+            return {'status':'processed','results':results,'budget':Budget(root).summary()}
+    except BlockingIOError:return {'status':'already_running'}

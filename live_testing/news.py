@@ -255,7 +255,11 @@ def collect_articles(start,end,cache_root,fetcher=None,*,article_fetcher=None):
         candidates=[row for row in united if row['url'] and not row['body'] and start<=aware(row['published_at'])<end]
         def read_one(row):
             try:
-                page=reader(row['url']);item={**row,**page,'url':row['url']}
+                page=reader(row['url'])
+                # An article updated after this boundary cannot supply its new
+                # headline either. Retain only the pre-hydration feed evidence.
+                if page.get('dateModified') and aware(page['dateModified'])>end:return None
+                item={**row,**page,'url':row['url']}
                 normalized=_normalize(item,None,{'source':'exact_article_publication_metadata','retrieved_at':now(),'original_url':row['url']},end)
                 # The page's explicit datePublished overrides provider timestamps.
                 normalized['published_at']=aware(page['datePublished']).isoformat();normalized['publication_basis']='datePublished'

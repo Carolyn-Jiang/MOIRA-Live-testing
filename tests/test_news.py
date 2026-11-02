@@ -68,6 +68,14 @@ class NewsTests(unittest.TestCase):
         result=news.collect_articles(self.start,self.end,other,fetcher=lambda ticker:[row] if ticker=='NVDA' else [])
         self.assertIsNone(result['articles'][0]['body']);self.assertEqual(result['articles'][0]['content_basis'],'partial_headline')
 
+    def test_post_boundary_hydrated_headline_is_not_substituted_into_old_observation(self):
+        reader=Mock(return_value={'datePublished':self.start,'dateModified':'2026-11-03T10:00:00-05:00',
+            'title':'Updated headline with future events','body':'Future updated body.'})
+        result=news.collect_articles(self.start,self.end,self.root,fetcher=self.fetch,article_fetcher=reader)
+        self.assertEqual(len(result['articles']),1)
+        self.assertEqual(result['articles'][0]['title'],self.article['title'])
+        self.assertIsNone(result['articles'][0]['body'])
+
     def test_capped_and_missing_feeds_remain_explicitly_partial_or_unavailable(self):
         articles=[{**self.article,'uuid':str(i),'link':f'https://example.com/{i}'} for i in range(200)]
         def fetch(ticker):

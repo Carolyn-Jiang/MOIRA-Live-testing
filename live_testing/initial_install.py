@@ -7,6 +7,7 @@ book, decisions and dispatcher state are immutable throughout this operation.
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -49,9 +50,24 @@ def _write_bytes(path, payload):
     temporary.replace(path); path.chmod(0o600)
 
 
+def _result_directories(training_directory):
+    """Allow explicit recovered outputs without copying or aliasing any source."""
+    if isinstance(training_directory, Mapping):
+        if set(training_directory) != set(TOP_K):
+            raise ValueError("Exactly the three registered variant source directories are required")
+        result = {model: Path(training_directory[model]).resolve() for model in TOP_K}
+    else:
+        parent = Path(training_directory).resolve()
+        result = {model: parent/model for model in TOP_K}
+    if len(set(result.values())) != len(TOP_K):
+        raise ValueError("Every variant requires its own genuine training output directory")
+    return result
+
+
 def validate_staged_results(root, training_directory):
     """Read-only proof of all three paid/native results, with no model operation."""
-    root, training_directory = Path(root).resolve(), Path(training_directory).resolve()
+    root = Path(root).resolve()
+    directories = _result_directories(training_directory)
     proof = source_proof(root)
     if len(proof) != 32: raise ValueError("All 32 original historical source files must be verified")
     bundle = read_json(root/"seed/moira-bundle.json")
@@ -59,7 +75,7 @@ def validate_staged_results(root, training_directory):
     budget = read_json(root/"api-budget.json", {"calls": {}})
     results = {}
     for model in TOP_K:
-        directory = training_directory/model
+        directory = directories[model]
         status = read_json(directory/"initial-training-status.json")
         if not status or status.get("status") != "ready":
             raise RuntimeError("All three genuine initial training results must be ready")
@@ -175,7 +191,8 @@ def _already_installed(root, marker):
 
 def install_initial_training(root, training_directory):
     """Explicit installer only; caller must wait for and authorize all results."""
-    root, training_directory = Path(root).resolve(), Path(training_directory).resolve()
+    root = Path(root).resolve()
+    directories = _result_directories(training_directory)
     with locked(root/"run.lock", nonblocking=True):
         marker_path = root/"initial-training-install.json"
         existing = read_json(marker_path)
@@ -187,7 +204,7 @@ def install_initial_training(root, training_directory):
                     or live.get("active_pair") is not None
                     or any(key.startswith(model+":") for key in runtime.get("model_attempts", {}))):
                 raise ValueError("A variant with an existing live decision/attempt cannot be replaced")
-        bundle, results, sources = validate_staged_results(root, training_directory)
+        bundle, results, sources = validate_staged_results(root, directories)
         preserved = _preserved(root)
         seed_trees = {model:_tree(root/"models"/model) for model in TOP_K}
         transaction = root/"initial-install"/(datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")+"-"+uuid.uuid4().hex[:8])
@@ -227,7 +244,8 @@ def install_initial_training(root, training_directory):
             training_completion_cutoff=cutoff.isoformat(), created_at=permission.get("created_at", now()),
             authorization=permission.get("authorization", "User explicitly authorized genuine variant-specific initial training followed by point-in-time filling of already-frozen November 2 preparation gaps; real model generation times remain visible privately."),
             scope="Only November 2 release boundaries at/before actual training completion with an already-published immutable cached observation.")
-        plan = {"status":"committing", "transaction":str(transaction), "source_directory":str(training_directory),
+        plan = {"status":"committing", "transaction":str(transaction),
+            "source_directories":{model:str(directory) for model,directory in directories.items()},
             "training_completion_cutoff":cutoff.isoformat(), "preserved_before":preserved,
             "source_sha256":sources, "archived_initial_seed_sha256":seed_trees, "new_api_or_embedding_calls":0}
         write_private(marker_path, plan)
