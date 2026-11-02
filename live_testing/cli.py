@@ -37,7 +37,8 @@ def main():
                     raise RuntimeError('Training must finish before preparation replay')
                 cutoff=aware(permission['training_completion_cutoff'])
                 nodes=[at for at in DEFAULT_CALENDAR.release_nodes if at.date().isoformat()==permission['date'] and at<=cutoff]
-            result=[runtime.release(at,replay=True) for at in nodes]
+            result={'results':[runtime.release(at,replay=True,publish_site=False) for at in nodes],
+                    'website':runtime.feed()}
     else:
         with locked(args.state_dir/'run.lock',nonblocking=True):result=Runtime(args.state_dir).feed()
     print(json.dumps(result,ensure_ascii=False),flush=True)

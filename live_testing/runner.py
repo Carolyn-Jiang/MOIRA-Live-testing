@@ -27,6 +27,10 @@ class Runtime:
         os.environ['PAIR_TRADING_FIX_ROOT']=self.config['framework_root']
         os.environ['MOIRA_LIVE_STATE_DIR']=str(self.root)
         os.environ.setdefault('TIKTOKEN_CACHE_DIR',str(self.root.parent/'trading-local/tokenizer-cache'))
+        from .fast_memory import configure_native_kernel
+        kernel=configure_native_kernel()
+        write_private(self.root/'memory-kernel.json',{**kernel,'configured_at':now(),
+            'implementation_sha256':file_hash(Path(__file__).with_name('fast_memory.py'))})
         self.book=read_json(self.root/'book.json');self.state=read_json(self.root/'runtime.json');self._gateway=None
     @property
     def gateway(self):
@@ -36,12 +40,13 @@ class Runtime:
         return self._gateway
     def save(self):
         write_private(self.root/'book.json',self.book);write_private(self.root/'runtime.json',self.state)
-    def feed(self):
+    def feed(self,*,publish=True):
         manifests=[{'timestamp':at,'published_at':r['published_at'],'coverage':'partial'} for at,r in self.state['published'].items()]
         feed=build_feed(self.book,budget_ledger=read_json(self.root/'api-budget.json'),release_manifests=manifests,
             asof=datetime.now(timezone.utc))
         write_private(self.root/'website-feed-pending.json',feed)
         self.state['website_pending']=True;self.save()
+        if not publish:return {'verified':False,'status':'prepared'}
         result=publish_feed(feed,self.root)
         if result.get('verified'):
             self.state['website_pending']=False;self.save()
@@ -110,7 +115,7 @@ class Runtime:
         from .moira_native import decide
         return decide(obs,model,self.root/'models'/model,read_json(self.root/'seed/moira-bundle.json'),gateway,
             asof=datetime.now(timezone.utc),replay=replay)
-    def release(self,at,*,replay=False):
+    def release(self,at,*,replay=False,publish_site=True):
         at=aware(at);event_id='release:'+at.isoformat();window=DEFAULT_CALENDAR.action_window(at)
         instant=datetime.now(timezone.utc)
         if replay:
@@ -130,7 +135,7 @@ class Runtime:
         except Exception as error:
             settle_due(self.book,datetime.now(timezone.utc))
             self.state['errors'][event_id]={'data':type(error).__name__};self.save()
-            website=self.feed()
+            website=self.feed(publish=publish_site)
             return {'status':'pending','event':event_id,'reason':type(error).__name__,
                 'website_verified':website['verified'],'private_data_verified':False}
         published=publish(self.root,data);self.state['published'][at.isoformat()]=published
@@ -150,6 +155,9 @@ class Runtime:
             attempt=self.state['model_attempts'].get(attempt_id)
             if attempt and attempt.get('status') in ('ambiguous','in_progress'):
                 errors[model]='prior_ambiguous_attempt_requires_audit';continue
+            if any(node<at and node.isoformat() not in self.book['decisions'][model]
+                    for node in DEFAULT_CALENDAR.release_nodes):
+                errors[model]='prior_model_decision_pending';continue
             if not replay and datetime.now(timezone.utc)>=window.entry_at-timedelta(minutes=5):
                 errors[model]='decision_deadline_passed';continue
             self.state['model_attempts'][attempt_id]={'status':'in_progress','started_at':now(),'input_sha256':digest(obs)};self.save()
@@ -167,7 +175,7 @@ class Runtime:
                 self.state['model_attempts'][attempt_id].update(status='ambiguous',error_type=type(error).__name__);self.save()
         complete=all(at.isoformat() in self.book['decisions'][model] for model in MODEL_IDS)
         if complete:self.state['completed_events'].append(event_id)
-        self.state['errors'][event_id]=errors;self.save();website=self.feed()
+        self.state['errors'][event_id]=errors;self.save();website=self.feed(publish=publish_site)
         return {'status':'completed' if complete else 'pending','event':event_id,'pending_models':errors,
             'website_verified':website['verified'],'private_data_verified':True}
     def valuation(self,at):

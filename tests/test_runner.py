@@ -76,6 +76,14 @@ class RunnerTests(unittest.TestCase):
         result=self.release();self.assertEqual(result['pending_models']['codex'],'prior_ambiguous_attempt_requires_audit')
         self.assertEqual(self.runtime.state['model_attempts'][key],original);self.runtime.decide.assert_not_called()
 
+    def test_missing_earlier_action_blocks_later_inference_without_creating_attempt(self):
+        self.seed_current(tuple(model for model in MODEL_IDS if model!='codex'))
+        self.runtime.feedback=Mock(return_value={})
+        result=self.release()
+        self.assertEqual(result['pending_models']['codex'],'prior_model_decision_pending')
+        self.assertEqual(self.runtime.state['model_attempts'],{})
+        self.runtime.decide.assert_not_called()
+
     def test_feedback_embedding_failure_does_not_undo_accounting_or_allow_new_model_decision(self):
         self.seed_first_interval();self.seed_current(tuple(model for model in MODEL_IDS if model!='moira'))
         first=DEFAULT_CALENDAR.release_nodes[0];record={'release_at':first.isoformat()}
