@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "live",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-02T15:34:43.322643-05:00",
+  "updated_at": "2026-11-02T17:45:28.141526-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -17,16 +17,16 @@
     "completed_rounds": 4,
     "rows": [
       {
-        "model_id": "moira",
-        "cumulative_return": 0.009367634869440922,
-        "sharpe_ratio": 0.5,
-        "max_drawdown": 0.0
-      },
-      {
         "model_id": "finmem",
         "cumulative_return": 0.00777854458540328,
         "sharpe_ratio": 1.2869378657792645,
         "max_drawdown": 0.0
+      },
+      {
+        "model_id": "moira",
+        "cumulative_return": 0.0007336722568320742,
+        "sharpe_ratio": 0.07336161944343715,
+        "max_drawdown": 0.0027186869251321077
       },
       {
         "model_id": "moira2-top3",
@@ -113,19 +113,19 @@
           },
           {
             "step": 1,
-            "equity": 1.009367634869441
+            "equity": 0.9972813130748679
           },
           {
             "step": 2,
-            "equity": 1.009367634869441
+            "equity": 0.9972813130748679
           },
           {
             "step": 3,
-            "equity": 1.009367634869441
+            "equity": 1.000733672256832
           },
           {
             "step": 4,
-            "equity": 1.009367634869441
+            "equity": 1.000733672256832
           }
         ]
       },
@@ -215,16 +215,16 @@
       "completed_rounds": 4,
       "rows": [
         {
-          "model_id": "moira",
-          "cumulative_return": 0.009367634869440922,
-          "sharpe_ratio": 0.5,
-          "max_drawdown": 0.0
-        },
-        {
           "model_id": "finmem",
           "cumulative_return": 0.00777854458540328,
           "sharpe_ratio": 1.2869378657792645,
           "max_drawdown": 0.0
+        },
+        {
+          "model_id": "moira",
+          "cumulative_return": 0.0007336722568320742,
+          "sharpe_ratio": 0.07336161944343715,
+          "max_drawdown": 0.0027186869251321077
         },
         {
           "model_id": "moira2-top3",
@@ -311,19 +311,19 @@
             },
             {
               "step": 1,
-              "equity": 1.009367634869441
+              "equity": 0.9972813130748679
             },
             {
               "step": 2,
-              "equity": 1.009367634869441
+              "equity": 0.9972813130748679
             },
             {
               "step": 3,
-              "equity": 1.009367634869441
+              "equity": 1.000733672256832
             },
             {
               "step": 4,
-              "equity": 1.009367634869441
+              "equity": 1.000733672256832
             }
           ]
         },
@@ -460,19 +460,19 @@
         },
         {
           "model_id": "moira",
-          "input_tokens": 479079,
-          "cached_input_tokens": 0,
-          "output_tokens": 2552,
-          "total_tokens": 481631,
-          "training_tokens": 0,
-          "inference_tokens": 481631,
+          "input_tokens": 3892102,
+          "cached_input_tokens": 423936,
+          "output_tokens": 159444,
+          "total_tokens": 4051546,
+          "training_tokens": 2727069,
+          "inference_tokens": 1324477,
           "recorded_tokens": {
-            "input_tokens": 479079,
-            "cached_input_tokens": 0,
-            "output_tokens": 2552,
-            "total_tokens": 481631,
-            "training_tokens": 0,
-            "inference_tokens": 481631
+            "input_tokens": 3892102,
+            "cached_input_tokens": 423936,
+            "output_tokens": 159444,
+            "total_tokens": 4051546,
+            "training_tokens": 2727069,
+            "inference_tokens": 1324477
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -482,7 +482,7 @@
             "training_tokens": "complete",
             "inference_tokens": "complete"
           },
-          "estimated_cost_usd": 0.1957148,
+          "estimated_cost_usd": 1.6847704,
           "cost_coverage": "complete"
         },
         {
@@ -587,7 +587,7 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 3.7889074,
+    "spent_usd": 5.277963,
     "reserved_usd": 0.1484880000000004,
     "warning_usd": 20,
     "limit_usd": 100,

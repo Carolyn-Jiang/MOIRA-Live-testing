@@ -7,6 +7,7 @@ import shutil
 from .storage import write_private,read_json,file_hash,locked,now
 from .registry import MODEL_IDS,TICKERS
 from .accounting import new_book
+from .pair_lifecycle import validate_legacy_moira_seals
 
 def prepare(state_dir,legacy_dir,framework_root,key_file):
     root=Path(state_dir).resolve();legacy=Path(legacy_dir).resolve();repo=Path(__file__).resolve().parents[1]
@@ -21,6 +22,7 @@ def prepare(state_dir,legacy_dir,framework_root,key_file):
             rid=f'2026-11-02_{8+i:02d}:30'
             if set(source['sealed'].get(rid,{}))!={'Codex','FinMem','Moira'}:
                 raise ValueError('Both original rounds need all three genuine accepted actions')
+        validate_legacy_moira_seals(source,limit=2)
         proof={};seed=root/'seed';seed.mkdir(mode=0o700,exist_ok=True)
         def copied(source_path,destination):
             source_path=Path(source_path);destination=Path(destination)

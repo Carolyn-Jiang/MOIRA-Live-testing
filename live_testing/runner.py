@@ -15,6 +15,8 @@ from .data import collect_release,publish,observation,prices,release_id,round_id
 from .projection import build_feed
 from .site_publish import publish_feed
 from .native_source import operations_for
+from .pair_lifecycle import MOIRA_MODELS,validate_book_pair_lifecycle,validate_next_pair
+from .repair_moira_lifecycle import assert_installation_consistent
 
 ACTION_SCHEMA={'type':'object','properties':{'stock1':{'type':'string','enum':list(TICKERS)},
     'stock2':{'type':'string','enum':list(TICKERS)},'action':{'type':'string','enum':['LS','SL','F']}},
@@ -22,7 +24,9 @@ ACTION_SCHEMA={'type':'object','properties':{'stock1':{'type':'string','enum':li
 
 class Runtime:
     def __init__(self,root):
-        self.root=Path(root).resolve();self.config=read_json(self.root/'config.json')
+        self.root=Path(root).resolve()
+        assert_installation_consistent(self.root)
+        self.config=read_json(self.root/'config.json')
         if self.config is None:raise RuntimeError('Run explicit bootstrap before scheduling this experiment')
         os.environ['PAIR_TRADING_FIX_ROOT']=self.config['framework_root']
         os.environ['MOIRA_LIVE_STATE_DIR']=str(self.root)
@@ -100,6 +104,7 @@ class Runtime:
             raise ValueError('Only explicitly authorized preparation gaps with already-frozen published observations may be replayed')
         return permission['authorization']
     def decide(self,model,obs,*,replay=False):
+        validate_book_pair_lifecycle(self.book)
         self.require_variant_training(model)
         gateway=self.gateway.scoped(model,'replay' if replay else 'inference',obs['round_id'])
         if model=='codex':
@@ -113,8 +118,10 @@ class Runtime:
             directory=Path(read_json(self.root/'models/finmem/active-epoch.json')['directory'])
             return finmem_native.decide(read_json(self.root/'seed/finmem-bundle.json'),obs,gateway.key,gateway.budget,directory)
         from .moira_native import decide
-        return decide(obs,model,self.root/'models'/model,read_json(self.root/'seed/moira-bundle.json'),gateway,
+        result=decide(obs,model,self.root/'models'/model,read_json(self.root/'seed/moira-bundle.json'),gateway,
             asof=datetime.now(timezone.utc),replay=replay)
+        if model in MOIRA_MODELS:validate_next_pair(model,self.book['decisions'][model],obs['timestamp'],result)
+        return result
     def release(self,at,*,replay=False,publish_site=True):
         at=aware(at);event_id='release:'+at.isoformat();window=DEFAULT_CALENDAR.action_window(at)
         instant=datetime.now(timezone.utc)

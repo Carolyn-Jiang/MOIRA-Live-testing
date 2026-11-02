@@ -118,7 +118,10 @@ def import_legacy_actions(book, legacy_phase3_directory, calendar=DEFAULT_CALEND
     """
     if type(limit) is not int or not 1 <= limit <= 2:
         raise ValueError("Only the explicitly authorized first two actions may be copied")
+    from .pair_lifecycle import validate_pair_lifecycle,validate_legacy_moira_seals
     validate_book(book, calendar=calendar)
+    if 'moira' in book['decisions']:
+        validate_pair_lifecycle('moira',book['decisions']['moira'],calendar=calendar)
     source = _Source(legacy_phase3_directory)
     previous = book.get("legacy_import")
     if previous is not None:
@@ -134,6 +137,7 @@ def import_legacy_actions(book, legacy_phase3_directory, calendar=DEFAULT_CALEND
     releases = calendar.release_nodes[:limit]
     if not releases or releases[0].isoformat() != "2026-11-02T09:30:00-05:00":
         raise ValueError("Copied source actions must match the new experiment's initial release grid")
+    validate_legacy_moira_seals(state,limit=limit,calendar=calendar)
     candidate = copy.deepcopy(book)
     copied, records = 0, []
     for i, at in enumerate(releases):
@@ -212,5 +216,6 @@ def import_legacy_actions(book, legacy_phase3_directory, calendar=DEFAULT_CALEND
         existing_usage[row["source_call_id"]] = row
     candidate["imported_usage"] = list(existing_usage.values())
     validate_book(candidate, calendar=calendar)
+    validate_pair_lifecycle('moira',candidate['decisions']['moira'],calendar=calendar)
     book.clear(); book.update(candidate)
     return copy.deepcopy(report)
