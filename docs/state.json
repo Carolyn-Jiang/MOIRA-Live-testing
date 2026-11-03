@@ -1,8 +1,8 @@
 {
   "schema": "moira.live-testing.website/1",
-  "status": "pending",
+  "status": "live",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-03T10:30:43.467427-05:00",
+  "updated_at": "2026-11-03T10:41:28.717407-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -509,12 +509,12 @@
           "training_tokens": 0,
           "inference_tokens": null,
           "recorded_tokens": {
-            "input_tokens": 240317,
+            "input_tokens": 291142,
             "cached_input_tokens": 0,
-            "output_tokens": 134,
-            "total_tokens": 240451,
+            "output_tokens": 160,
+            "total_tokens": 291302,
             "training_tokens": 0,
-            "inference_tokens": 240451
+            "inference_tokens": 291302
           },
           "token_coverage": {
             "input_tokens": "partial",
@@ -524,24 +524,24 @@
             "training_tokens": "complete",
             "inference_tokens": "partial"
           },
-          "estimated_cost_usd": 0.42243075,
+          "estimated_cost_usd": 0.5117385,
           "cost_coverage": "partial"
         },
         {
           "model_id": "finmem",
-          "input_tokens": 259037,
+          "input_tokens": 308550,
           "cached_input_tokens": null,
-          "output_tokens": 1504,
-          "total_tokens": 260541,
+          "output_tokens": 1738,
+          "total_tokens": 310288,
           "training_tokens": 0,
-          "inference_tokens": 260541,
+          "inference_tokens": 310288,
           "recorded_tokens": {
-            "input_tokens": 259037,
+            "input_tokens": 308550,
             "cached_input_tokens": 1920,
-            "output_tokens": 1504,
-            "total_tokens": 260541,
+            "output_tokens": 1738,
+            "total_tokens": 310288,
             "training_tokens": 0,
-            "inference_tokens": 260541
+            "inference_tokens": 310288
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -551,24 +551,24 @@
             "training_tokens": "complete",
             "inference_tokens": "complete"
           },
-          "estimated_cost_usd": 0.10470468000000001,
+          "estimated_cost_usd": 0.12475846,
           "cost_coverage": "complete"
         },
         {
           "model_id": "moira",
-          "input_tokens": 4044421,
+          "input_tokens": 4149876,
           "cached_input_tokens": 423936,
-          "output_tokens": 159762,
-          "total_tokens": 4204183,
+          "output_tokens": 160080,
+          "total_tokens": 4309956,
           "training_tokens": 2727069,
-          "inference_tokens": 1477114,
+          "inference_tokens": 1582887,
           "recorded_tokens": {
-            "input_tokens": 4044421,
+            "input_tokens": 4149876,
             "cached_input_tokens": 423936,
-            "output_tokens": 159762,
-            "total_tokens": 4204183,
+            "output_tokens": 160080,
+            "total_tokens": 4309956,
             "training_tokens": 2727069,
-            "inference_tokens": 1477114
+            "inference_tokens": 1582887
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -578,7 +578,7 @@
             "training_tokens": "complete",
             "inference_tokens": "complete"
           },
-          "estimated_cost_usd": 1.7462068,
+          "estimated_cost_usd": 1.7888976,
           "cost_coverage": "complete"
         },
         {
@@ -590,12 +590,12 @@
           "training_tokens": null,
           "inference_tokens": null,
           "recorded_tokens": {
-            "input_tokens": 5535121,
+            "input_tokens": 5695659,
             "cached_input_tokens": 438144,
-            "output_tokens": 218330,
-            "total_tokens": 5753451,
+            "output_tokens": 218870,
+            "total_tokens": 5914529,
             "training_tokens": 3495416,
-            "inference_tokens": 2258035
+            "inference_tokens": 2419113
           },
           "token_coverage": {
             "input_tokens": "partial",
@@ -605,7 +605,7 @@
             "training_tokens": "partial",
             "inference_tokens": "partial"
           },
-          "estimated_cost_usd": 2.46361364,
+          "estimated_cost_usd": 2.52766765,
           "cost_coverage": "partial"
         },
         {
@@ -615,14 +615,14 @@
           "output_tokens": null,
           "total_tokens": null,
           "training_tokens": null,
-          "inference_tokens": 2471960,
+          "inference_tokens": 2742980,
           "recorded_tokens": {
-            "input_tokens": 7923227,
+            "input_tokens": 8193062,
             "cached_input_tokens": 333568,
-            "output_tokens": 310877,
-            "total_tokens": 8234104,
+            "output_tokens": 312062,
+            "total_tokens": 8505124,
             "training_tokens": 5762144,
-            "inference_tokens": 2471960
+            "inference_tokens": 2742980
           },
           "token_coverage": {
             "input_tokens": "partial",
@@ -632,7 +632,7 @@
             "training_tokens": "partial",
             "inference_tokens": "complete"
           },
-          "estimated_cost_usd": 3.4546539,
+          "estimated_cost_usd": 3.5642773500000002,
           "cost_coverage": "partial"
         },
         {
@@ -642,14 +642,14 @@
           "output_tokens": null,
           "total_tokens": null,
           "training_tokens": null,
-          "inference_tokens": 3210526,
+          "inference_tokens": 3377454,
           "recorded_tokens": {
-            "input_tokens": 9433226,
+            "input_tokens": 9599418,
             "cached_input_tokens": 569216,
-            "output_tokens": 298010,
-            "total_tokens": 9731236,
+            "output_tokens": 298746,
+            "total_tokens": 9898164,
             "training_tokens": 6520710,
-            "inference_tokens": 3210526
+            "inference_tokens": 3377454
           },
           "token_coverage": {
             "input_tokens": "partial",
@@ -659,7 +659,7 @@
             "training_tokens": "partial",
             "inference_tokens": "complete"
           },
-          "estimated_cost_usd": 3.98926296,
+          "estimated_cost_usd": 4.05671729,
           "cost_coverage": "partial"
         }
       ],
@@ -676,14 +676,14 @@
     }
   ],
   "data_status": {
-    "published_batches": 7,
+    "published_batches": 8,
     "expected_release_points": 830,
-    "last_release_at": "2026-11-03T09:30:00-05:00",
+    "last_release_at": "2026-11-03T10:30:00-05:00",
     "coverage": "partial"
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 12.1432215,
+    "spent_usd": 12.53640562,
     "reserved_usd": 0.1711740000000006,
     "warning_usd": 20,
     "limit_usd": 100,
