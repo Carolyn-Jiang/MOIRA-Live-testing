@@ -27,14 +27,20 @@ The ten eligible tickers are NVDA, GOOG, META, MSFT, JPM, AMZN, AAPL, AMD, WMT a
 
 One immutable memory unit represents one exited action, its actual and LS/SL/F counterfactual returns, a whole reflection and source/availability provenance. Each model version has an independent bank; training and live namespaces are distinct. Incomplete or future outcomes cannot enter retrieval.
 
-The retrieval score is:
+The current, versioned retrieval score is:
 
 ```text
-cosine(query, memory) + min(raw_importance, 100) / 100
-                     + exp(-elapsed_exchange_sessions / 252)
+S = R + V + I
+R = exp(-H / 409.5)
+V = (clip(cosine(query, memory), -1, 1) + 1) / 2
+I = clip(I + eta * (target - I), 0, 1)
 ```
 
-Exchange sessions, rather than calendar days, determine recency. Initial importance is 50. Feedback adds 18 after a positive realized return, subtracts 18 after a negative return, and leaves it unchanged at zero. Raw importance is retained without a lower clamp or hidden decay; only its scoring normalization is capped above at 100. Feedback applies only to the memories actually retrieved for that exited decision, once its outcome is available. See [live_testing/memory.py](live_testing/memory.py).
+Each component lies in [0, 1]. H counts actual exchange-open hours, including fractional hours and the configured holidays and shortened sessions. The time constant is a trading quarter: 63 standard days × 6.5 hours = 409.5 hours. Weekends, overnight closures and holidays do not age a memory. Recency falls to exp(-1), approximately 0.368, after that amount of market time; this is a time constant, not a half-life.
+
+Importance starts at 0.5. At every matured feedback, the decision's actually cited memory IDs receive individually verified credit. A leave-one-memory-out call preserves the original frozen prompt, observation, pair, context and settings, removing only that memory. Its resulting action is evaluated on the identical immutable entry/exit prices. A better result without the memory is harmful (target 0, eta 0.04); a worse result is helpful (target 1, eta 0.02); equal returns or insufficient evidence are neutral (target 0.5, eta 0.01). Three helpful updates reach only 0.529404. These model perturbations are attribution evidence, not proof of causality. A failed comparison remains pending rather than supplying invented credit. Only cited units are updated, once per feedback; retrieval-only units are not penalized for a loss. Counts, timestamps, cited IDs and exact comparison evidence remain private.
+
+The new protocol is implemented in [live_testing/memory_v2.py](live_testing/memory_v2.py) and [live_testing/moira_v2_native.py](live_testing/moira_v2_native.py). Schema 1 and its original session-based ranking remain readable for archived experiments; their recorded scores, checkpoints, actions and costs are not rewritten as schema 2. Training and historical replay for this migration use separate staged artifacts and an explicit authorization before all three variants are installed together.
 
 ## Local setup
 
@@ -105,6 +111,8 @@ The simulator uses equal half-weight long/short legs with unit gross exposure. L
 Sharpe is the mean completed interval return divided by sample standard deviation (`ddof=1`), zero risk-free rate, without annualization. Zero or numerically negligible volatility produces N/A. Maximum drawdown is nonnegative `max(1 − equity/running_peak)`, including initial equity 1 and settlement observations only. Weekly views independently restart from equity 1; all-time equity carries across weeks.
 
 Provider input, cached-input, output and total token counts are measured, not guessed. Cached input is a subset of input. Training and inference classify usage by purpose. Shared news-processing tokens are reported separately instead of inventing a seventh ranked model. Imported usage with no source evidence remains unavailable, not zero.
+
+**Estimated Cost** applies the recorded standard rates to reported token usage; it is not an invoice or a platform Costs export. Billed spend comes from the provider's billing records. Reconcile the same account, project and time range before treating a difference as an accounting error; preserve the original usage and reservation records.
 
 All models and shared processing use one project-wide **New York calendar-month** budget: $20 warning and $100 hard cap. Every request reserves a conservative bounded cost before transport. Failed or usage-unknown requests keep their reservation. An attempted reservation exceeding the limit persists a block for the rest of that month, even if later actual costs reduce the reserved total. Acknowledging a warning does not add funds or unblock the month. A new New York month resets the spending window; stale pricing verification fails closed until reviewed. This is the experiment's local cost ledger, not an account-wide billing statement.
 

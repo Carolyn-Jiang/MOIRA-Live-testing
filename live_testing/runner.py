@@ -17,6 +17,8 @@ from .site_publish import publish_feed
 from .native_source import operations_for
 from .pair_lifecycle import MOIRA_MODELS,validate_book_pair_lifecycle,validate_next_pair
 from .repair_moira_lifecycle import assert_installation_consistent
+from .ranking_v2_install import assert_installation_consistent as assert_v2_installation_consistent
+from .ranking_v2_runtime import ready as ranking_v2_ready
 
 ACTION_SCHEMA={'type':'object','properties':{'stock1':{'type':'string','enum':list(TICKERS)},
     'stock2':{'type':'string','enum':list(TICKERS)},'action':{'type':'string','enum':['LS','SL','F']}},
@@ -26,6 +28,7 @@ class Runtime:
     def __init__(self,root):
         self.root=Path(root).resolve()
         assert_installation_consistent(self.root)
+        assert_v2_installation_consistent(self.root)
         self.config=read_json(self.root/'config.json')
         if self.config is None:raise RuntimeError('Run explicit bootstrap before scheduling this experiment')
         os.environ['PAIR_TRADING_FIX_ROOT']=self.config['framework_root']
@@ -77,8 +80,14 @@ class Runtime:
                         converted={**record,'round_id':round_id(key),'entry_timestamp':record['entry_at'],'exit_timestamp':record['exit_at']}
                         finmem_native.apply_feedback(converted,directory)
                     elif model!='codex':
-                        moira_native.apply_feedback(record,self.root/'models'/model,
-                            read_json(self.root/'seed/moira-bundle.json'),self.gateway.scoped(model,'inference','feedback:'+key),model)
+                        if ranking_v2_ready(self.root,model):
+                            from . import moira_v2_native
+                            moira_v2_native.apply_feedback(record,self.root/'models'/model,
+                                read_json(self.root/'seed/moira-bundle.json'),self.gateway.scoped(model,'inference','feedback:'+key),
+                                model,source_cutoff=cutoff)
+                        else:
+                            moira_native.apply_feedback(record,self.root/'models'/model,
+                                read_json(self.root/'seed/moira-bundle.json'),self.gateway.scoped(model,'inference','feedback:'+key),model)
                     self.state['feedback_applied'][model].append(key);self.save()
                 except Exception as error:
                     # Accounting never depends on a new embedding/model budget.
@@ -87,6 +96,7 @@ class Runtime:
         return errors
     def require_variant_training(self,model):
         if model not in TOP_K:return
+        if ranking_v2_ready(self.root,model):return
         directory=self.root/'models'/model
         ready=read_json(directory/'initial-training-ready.json')
         if (ready is None or ready.get('status')!='ready' or ready.get('model_id')!=model
@@ -117,7 +127,10 @@ class Runtime:
             from . import finmem_native
             directory=Path(read_json(self.root/'models/finmem/active-epoch.json')['directory'])
             return finmem_native.decide(read_json(self.root/'seed/finmem-bundle.json'),obs,gateway.key,gateway.budget,directory)
-        from .moira_native import decide
+        if ranking_v2_ready(self.root,model):
+            from .moira_v2_native import decide
+        else:
+            from .moira_native import decide
         result=decide(obs,model,self.root/'models'/model,read_json(self.root/'seed/moira-bundle.json'),gateway,
             asof=datetime.now(timezone.utc),replay=replay)
         if model in MOIRA_MODELS:validate_next_pair(model,self.book['decisions'][model],obs['timestamp'],result)

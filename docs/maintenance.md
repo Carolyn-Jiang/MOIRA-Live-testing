@@ -62,6 +62,21 @@ private backups and rollback protect a failed multi-file installation. This
 routine is future weekly training; copying historical seed units is not counted
 as initial training for a new setting.
 
+After the quarterly ranking migration, each Top-K version's readiness marker
+selects the schema-2 native trainer and belief-validation episodes. The original
+Moira keeps its separate native path. Weekly prompt installation also updates
+the corresponding immutable training-result hash and checkpoint marker, while
+preserving the live bank's individual importance values, feedback counts and
+unclosed actions. A missing or inconsistent schema-2 marker holds that model
+pending; it never falls back to schema 1.
+
+Schema-2 action feedback uses the actual cited memory IDs and exact original
+decision context for one-memory-removed comparisons. Each matured feedback is
+applied once, together with the new finalized reflection and a private evidence
+record. A failed or ambiguous comparison cannot be replaced with invented Flat
+or a blanket update to all retrieved memories. Only after a complete feedback
+transaction can a subsequent decision use its updated importance values.
+
 Only after training completes are dated company-operation summaries generated
 from cached previous-week per-article evidence for all models. Their source IDs,
 actual generation times, partial-coverage limitations and prior context backup

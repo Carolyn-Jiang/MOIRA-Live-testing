@@ -28,6 +28,16 @@ SCHEMA = 'moira.weekly-belief-review/1'
 EPS = 1e-12
 
 
+def _adapter_route(checkpoint,model_id):
+    protocol=checkpoint.get('memory_policy_protocol')
+    if protocol is None:return 'legacy-native/1',NativeTrainingAdapter
+    from .memory_v2 import PROTOCOL_VERSION
+    if protocol!=PROTOCOL_VERSION or model_id not in TOP_K:
+        raise ValueError('Belief validation cannot mix an unknown or non-variant memory protocol')
+    from .moira_v2_native import NativeTrainingAdapter as V2Adapter
+    return protocol,V2Adapter
+
+
 def _native_tools():
     native_root()
     from llm.policy_agent import DirectionPromptMemory, sanitize_reflection
@@ -242,7 +252,8 @@ def _candidate(prepared,beliefs,inactive,cases,proposal,review_id):
 
 def _episode(dataset,checkpoint,bundle,directory,gateway,model_id,review_id,label):
     directory=Path(directory);saved=read_json(directory/'result.json')
-    fingerprint=digest({'dataset':review_id,'checkpoint':checkpoint,'label':label})
+    protocol,adapter_type=_adapter_route(checkpoint,model_id)
+    fingerprint=digest({'dataset':review_id,'checkpoint':checkpoint,'label':label,'memory_policy_protocol':protocol})
     if saved is not None:
         if saved.get('input_sha256')!=fingerprint or digest(saved['evaluation'])!=saved.get('evaluation_sha256'):
             raise RuntimeError('Cached isolated replay proof changed')
@@ -250,8 +261,9 @@ def _episode(dataset,checkpoint,bundle,directory,gateway,model_id,review_id,labe
     marker=directory/'started.json'
     if marker.exists(): raise RuntimeError('Ambiguous isolated replay requires audit before any repeated paid request')
     write_private(marker,{'input_sha256':fingerprint,'started_at':now()})
-    adapter=NativeTrainingAdapter(dataset=dataset,bundle=bundle,directory=directory/'native',gateway=gateway,model_id=model_id)
-    result=simulate_episode(adapter,checkpoint,dataset,Namespace(model_id,'training',review_id+':'+label))
+    adapter=adapter_type(dataset=dataset,bundle=bundle,directory=directory/'native',gateway=gateway,model_id=model_id)
+    namespace=Namespace(model_id,'training',review_id+':'+label+':'+protocol)
+    result=simulate_episode(adapter,checkpoint,dataset,namespace)
     decisions={row.action_id:_action(value) for row,value in zip(dataset.observations,result.decisions)}
     if len(result.decisions)!=len(dataset.observations) or len(decisions)!=len(dataset.observations):
         raise RuntimeError('A validation replay omitted an actual native decision')
@@ -265,7 +277,7 @@ def _episode(dataset,checkpoint,bundle,directory,gateway,model_id,review_id,labe
     metrics=objective(returns[row.action_id] for row in dataset.observations if row.action_id in returns)
     if metrics!=result.metrics:raise RuntimeError('Replay metrics differ from actual finalized decisions')
     evaluation={'decisions':decisions,'returns':returns,'metrics':metrics,
-        'native_namespace':vars(Namespace(model_id,'training',review_id+':'+label)),
+        'native_namespace':vars(namespace),'memory_policy_protocol':protocol,
         'checkpoint_prompt_sha256':_prompt_hash(checkpoint),'finished_at':now()}
     write_private(directory/'result.json',{'input_sha256':fingerprint,'evaluation':evaluation,'evaluation_sha256':digest(evaluation)})
     return evaluation
@@ -277,6 +289,9 @@ def review_weekly_beliefs(dataset,prepared,bundle,directory,gateway,model_id,*,l
             or prepared.get('model_id',model_id)!=model_id or live_state.get('model_id',model_id)!=model_id
             or live_state.get('scope','live')!='live'):
         raise ValueError('Belief review cannot mix unready or different model/version checkpoints')
+    protocol,_=_adapter_route(prepared,model_id)
+    if live_state.get('memory_policy_protocol')!=prepared.get('memory_policy_protocol'):
+        raise ValueError('Belief review cannot mix active legacy and v2 model memory')
     directory=Path(directory).resolve();repo=Path(__file__).resolve().parents[1]
     if directory==repo or repo in directory.parents:raise ValueError('Belief review and actual decision evidence must remain private')
     with locked(directory/'review.lock',nonblocking=True):
@@ -284,7 +299,7 @@ def review_weekly_beliefs(dataset,prepared,bundle,directory,gateway,model_id,*,l
         audits=_audits(gateway,model_id)
         cases,accepted,native_records=_cases(clean,live_state,live_decisions,model_id,prepared['prompt_memory']['active_prompt'],audits)
         attributable=[c for c in cases if c['belief_prompt_evidence'] is not None]
-        fingerprint=digest({'model_id':model_id,'dataset':frozen,'prepared':prepared,'bundle':bundle,'accepted_live_decisions':accepted,
+        fingerprint=digest({'model_id':model_id,'memory_policy_protocol':protocol,'dataset':frozen,'prepared':prepared,'bundle':bundle,'accepted_live_decisions':accepted,
             'native_records':native_records,'cases':cases,'beliefs':beliefs})
         result_path=directory/'review-result.json';cached=read_json(result_path)
         if cached is not None:
@@ -295,6 +310,7 @@ def review_weekly_beliefs(dataset,prepared,bundle,directory,gateway,model_id,*,l
         write_private(directory/'original-checkpoint.json',prepared)
         write_private(directory/'failed-cases.json',{'model_id':model_id,'cases':cases,'source_input_sha256':fingerprint})
         result={'schema':SCHEMA,'status':'complete','input_sha256':fingerprint,'model_id':model_id,
+            'memory_policy_protocol':protocol,
             'training_at':clean.training_at.isoformat(),'checkpoint':copy.deepcopy(prepared),'applied':False,
             'failed_case_count':len(cases),'attributable_failed_case_count':len(attributable),
             'active_belief_count':len(beliefs),'pending_case_count':len(clean.pending_action_ids),

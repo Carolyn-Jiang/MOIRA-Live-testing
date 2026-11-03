@@ -30,6 +30,33 @@ def _event_dir(runtime, event): return Path(runtime.root)/"maintenance"/digest(e
 def _release_name(at): return aware(at).strftime("%Y-%m-%d_%H-%M_NY")
 
 
+def _training_module(root, model, prepared):
+    """Follow the installed policy; never downgrade an active v2 model."""
+    from . import moira_native
+    from .memory_v2 import PROTOCOL_VERSION
+    marker=read_json(Path(root)/'models'/model/'memory-policy.json')
+    protocol=prepared.get('memory_policy_protocol')
+    strict_ready=False
+    if model in TOP_K:
+        from .ranking_v2_runtime import ready
+        strict_ready=ready(root,model)
+    if protocol is None and marker is None:return moira_native
+    if (model not in TOP_K or protocol!=PROTOCOL_VERSION or not marker
+            or marker.get('protocol')!=PROTOCOL_VERSION or marker.get('status')!='ready'
+            or marker.get('model_id')!=model
+            or marker.get('checkpoint_sha256')!=file_hash(Path(root)/'models'/model/'prepared.json')):
+        raise ValueError('Installed weekly training policy/checkpoint is missing, mixed or unsupported')
+    if strict_ready is not True:
+        raise RuntimeError('A genuine hash-pinned v2 Sharpe training result is required before weekly review')
+    from . import moira_v2_native
+    return moira_v2_native
+
+
+def _checkpoint_policy(current, learned):
+    if learned.get('memory_policy_protocol')!=current.get('memory_policy_protocol'):
+        raise ValueError('Weekly training cannot change the installed memory-policy protocol')
+
+
 def _visible_releases(runtime, cutoff):
     result = []
     for stamp, manifest in runtime.state["published"].items():
@@ -86,6 +113,9 @@ def install_training_results(root, results, expected_hashes, backup):
         if any(file_hash(path) != expected_hashes[str(path)] for path in (prepared_path, live_path)):
             raise RuntimeError("Live model changed during isolated weekly training")
         learned = copy.deepcopy(results[model]["checkpoint"])
+        current_prepared=read_json(prepared_path)
+        _training_module(root,model,current_prepared)
+        _checkpoint_policy(current_prepared,learned)
         active = learned["prompt_memory"]["active_prompt"]
         if learned.get("model") != "gpt-4.1-mini" or hashlib.sha256(active.encode()).hexdigest() != learned["frozen_prompt_sha256"]:
             raise ValueError("Only a real valid learned native checkpoint can be installed")
@@ -95,6 +125,32 @@ def install_training_results(root, results, expected_hashes, backup):
         for path, value in ((prepared_path, learned), (live_path, live)):
             originals[path] = path.read_bytes(); replacements[path] = value
             _write_bytes(backup/model/path.name, originals[path])
+        policy_path=directory/'memory-policy.json'
+        if policy_path.exists():
+            if expected_hashes.get(str(policy_path))!=file_hash(policy_path):
+                raise RuntimeError('Installed memory-policy marker changed during weekly training')
+            result=results[model];artifact=result.get('artifact_directory')
+            if not isinstance(artifact,str) or not Path(artifact).is_absolute():
+                raise ValueError('A v2 weekly checkpoint requires its actual immutable artifact directory')
+            result_path=Path(artifact).resolve()/'training-result.json'
+            if (not result_path.is_relative_to(root.resolve()/'training') or not result_path.is_file()
+                    or result_path.is_symlink() or read_json(result_path)!=result):
+                raise ValueError('The actual persisted weekly training-result artifact differs')
+            marker=read_json(policy_path);previous=copy.deepcopy(marker)
+            prepared_bytes=(json.dumps(learned,indent=2,ensure_ascii=False,allow_nan=False)+'\n').encode()
+            marker.update(checkpoint_sha256=hashlib.sha256(prepared_bytes).hexdigest(),
+                prepared_path=str(prepared_path.resolve()),training_result_sha256=file_hash(result_path),
+                training_result_path=str(result_path),training_completed_at=result.get('finished_at'),
+                weekly_training_at=result.get('training_at'),updated_at=now(),
+                live_memory_bank_preserved=True,
+                live_seed_training_bank_sha256=marker.get('live_seed_training_bank_sha256',marker.get('training_bank_sha256')))
+            marker.setdefault('checkpoint_history',[]).append({
+                'checkpoint_sha256':previous['checkpoint_sha256'],
+                'training_result_sha256':previous.get('training_result_sha256'),
+                'training_result_path':previous.get('training_result_path'),
+                'superseded_at':marker['updated_at']})
+            originals[policy_path]=policy_path.read_bytes();replacements[policy_path]=marker
+            _write_bytes(backup/model/policy_path.name,originals[policy_path])
     try:
         for path, value in replacements.items(): write_private(path, value)
         for model in TRAINED_MODELS:
@@ -102,6 +158,9 @@ def install_training_results(root, results, expected_hashes, backup):
             current = read_json(root/"models"/model/"live-state.json")
             for key in set(old) - {"prepared_prompt_sha256", "pair_memory"}:
                 if current.get(key) != old[key]: raise RuntimeError("Weekly training changed live state outside learned memory")
+            policy_path=root/'models'/model/'memory-policy.json'
+            if policy_path in replacements and read_json(policy_path)['checkpoint_sha256']!=file_hash(root/'models'/model/'prepared.json'):
+                raise RuntimeError('The installed v2 marker does not match the actual prepared bytes')
     except Exception:
         for path, value in originals.items(): _write_bytes(path, value)
         raise
@@ -177,6 +236,8 @@ def _training(runtime, event, directory):
     week = aware(event.at).strftime("%G-W%V"); root = Path(runtime.root)
     snapshots = {str(root/"models"/model/name):file_hash(root/"models"/model/name)
         for model in TRAINED_MODELS for name in ("prepared.json","live-state.json")}
+    snapshots.update({str(path):file_hash(path) for model in TRAINED_MODELS
+        if (path:=root/'models'/model/'memory-policy.json').exists()})
     marker = read_json(directory/"training-status.json")
     if marker is None:
         marker = {"status":"training","training_at":aware(event.at).isoformat(),"source_observations":sources,
@@ -185,12 +246,21 @@ def _training(runtime, event, directory):
     elif marker["source_sha256"] != digest(sources): raise RuntimeError("Frozen weekly training sources changed")
     results, failures = {}, {}
     if marker["status"] != "native_installed":
-        from . import moira_native
         bundle = read_json(root/"seed/moira-bundle.json")
+        routes={}
+        for model in TRAINED_MODELS:
+            try:routes[model]=_training_module(root,model,read_json(root/'models'/model/'prepared.json'))
+            except Exception as error:failures[model]=type(error).__name__
+        if failures:
+            write_private(directory/"training-failures.json",failures)
+            return {"status":"pending","reason":"all_four_ready_checkpoints_required","failures":failures}
         def train(model):
+            active_prepared=read_json(root/'models'/model/'prepared.json')
+            native=routes[model]
             target = root/"training"/week/model; result = read_json(target/"training-result.json")
             if result is not None:
                 if result.get("training_at") != aware(event.at).isoformat(): raise RuntimeError("Wrong saved weekly result")
+                _checkpoint_policy(active_prepared,result['checkpoint'])
                 reviewed = read_json(target/"belief-review"/"review-result.json")
                 proof = result.get("belief_review",{})
                 if (reviewed is None or reviewed.get("status") != "complete"
@@ -202,7 +272,7 @@ def _training(runtime, event, directory):
                 return result
             attempt = target/"maintenance-attempt.json"
             if read_json(attempt) is not None: raise RuntimeError("Ambiguous prior training attempt; no duplicate paid calls")
-            prepared = copy.deepcopy(read_json(root/"models"/model/"prepared.json"))
+            prepared = copy.deepcopy(active_prepared)
             live_state = read_json(root/"models"/model/"live-state.json")
             prepared["pair_memory"] = copy.deepcopy(live_state["pair_memory"])
             write_private(attempt,{"status":"started","source_sha256":marker["source_sha256"],"started_at":now()})
@@ -217,7 +287,11 @@ def _training(runtime, event, directory):
                 raise RuntimeError("Completed belief-review checkpoint must match its persisted audit")
             write_private(attempt,{"status":"native_training_started","source_sha256":marker["source_sha256"],
                 "belief_review_sha256":digest(reviewed),"started_at":now()})
-            result = moira_native.train_week(dataset,reviewed["checkpoint"],bundle,target,gateway,model,max_cycles=8)
+            _checkpoint_policy(active_prepared,reviewed['checkpoint'])
+            result = native.train_week(dataset,reviewed["checkpoint"],bundle,target,gateway,model,max_cycles=8)
+            artifact=result.get('artifact_directory',str(target.resolve()))
+            if Path(artifact).resolve()!=target.resolve():raise ValueError('Weekly native artifacts were written outside their immutable job directory')
+            result['artifact_directory']=str(target.resolve())
             result["belief_review"] = {"report_sha256":digest(reviewed),
                 "checkpoint_sha256":digest(reviewed["checkpoint"]),"completed_before_training":True}
             write_private(target/"training-result.json",result)
