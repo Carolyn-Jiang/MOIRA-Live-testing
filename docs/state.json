@@ -1,56 +1,56 @@
 {
   "schema": "moira.live-testing.website/1",
-  "status": "live",
+  "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-05T03:34:08.489204-05:00",
+  "updated_at": "2026-11-05T09:34:00.899141-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
     "final_settlement": "2027-05-24T10:30:00-04:00"
   },
   "next_release": {
-    "timestamp": "2026-11-05T09:30:00-05:00",
+    "timestamp": "2026-11-05T10:30:00-05:00",
     "session_label": "NYSE regular session",
     "note": "Next actual observation node; exchange holidays and overnight gaps follow the verified calendar."
   },
   "all_time": {
-    "completed_rounds": 16,
+    "completed_rounds": 17,
     "rows": [
       {
-        "model_id": "moira2-top1",
-        "cumulative_return": 0.014153295184465176,
-        "sharpe_ratio": 0.17192271620809627,
-        "max_drawdown": 0.007610156771712617
-      },
-      {
-        "model_id": "moira2-top3",
-        "cumulative_return": 0.0096485001932618,
-        "sharpe_ratio": 0.09697784000459508,
-        "max_drawdown": 0.019907876226411547
-      },
-      {
-        "model_id": "finmem",
-        "cumulative_return": 0.008409434578976915,
-        "sharpe_ratio": 0.21803627114101387,
-        "max_drawdown": 0.006518607984470459
-      },
-      {
-        "model_id": "moira2-top5",
-        "cumulative_return": 0.00811923312184848,
-        "sharpe_ratio": 0.08250627048961881,
-        "max_drawdown": 0.02152383360328114
-      },
-      {
         "model_id": "codex",
-        "cumulative_return": 0.005704176822003193,
-        "sharpe_ratio": 0.055199886175594605,
+        "cumulative_return": 0.027084929021534476,
+        "sharpe_ratio": 0.1926542247628824,
         "max_drawdown": 0.024163070735393477
       },
       {
+        "model_id": "moira2-top3",
+        "cumulative_return": 0.01993648143469784,
+        "sharpe_ratio": 0.1789894313427546,
+        "max_drawdown": 0.019907876226411547
+      },
+      {
+        "model_id": "moira2-top5",
+        "cumulative_return": 0.0183916316422279,
+        "sharpe_ratio": 0.16595254092701467,
+        "max_drawdown": 0.02152383360328114
+      },
+      {
+        "model_id": "moira2-top1",
+        "cumulative_return": 0.008379708297240551,
+        "sharpe_ratio": 0.09567236110554109,
+        "max_drawdown": 0.0113979117475006
+      },
+      {
+        "model_id": "finmem",
+        "cumulative_return": 0.0006601119492033458,
+        "sharpe_ratio": 0.01409070244234805,
+        "max_drawdown": 0.011147596363442536
+      },
+      {
         "model_id": "moira",
-        "cumulative_return": -0.010857387259135876,
-        "sharpe_ratio": -0.3434099562296741,
-        "max_drawdown": 0.012166864251150322
+        "cumulative_return": -0.018458650168964308,
+        "sharpe_ratio": -0.4263111441481836,
+        "max_drawdown": 0.019758064224894123
       }
     ],
     "series": [
@@ -124,6 +124,10 @@
           {
             "step": 16,
             "equity": 1.0057041768220032
+          },
+          {
+            "step": 17,
+            "equity": 1.0270849290215345
           }
         ]
       },
@@ -197,6 +201,10 @@
           {
             "step": 16,
             "equity": 1.008409434578977
+          },
+          {
+            "step": 17,
+            "equity": 1.0006601119492033
           }
         ]
       },
@@ -270,6 +278,10 @@
           {
             "step": 16,
             "equity": 0.9891426127408641
+          },
+          {
+            "step": 17,
+            "equity": 0.9815413498310357
           }
         ]
       },
@@ -343,6 +355,10 @@
           {
             "step": 16,
             "equity": 1.0141532951844652
+          },
+          {
+            "step": 17,
+            "equity": 1.0083797082972406
           }
         ]
       },
@@ -416,6 +432,10 @@
           {
             "step": 16,
             "equity": 1.0096485001932618
+          },
+          {
+            "step": 17,
+            "equity": 1.0199364814346978
           }
         ]
       },
@@ -489,6 +509,10 @@
           {
             "step": 16,
             "equity": 1.0081192331218485
+          },
+          {
+            "step": 17,
+            "equity": 1.018391631642228
           }
         ]
       }
@@ -500,43 +524,43 @@
       "label": "Week of 2026-11-02",
       "start": "2026-11-02T00:00:00-05:00",
       "end": "2026-11-09T00:00:00-05:00",
-      "completed_rounds": 16,
+      "completed_rounds": 17,
       "rows": [
         {
-          "model_id": "moira2-top1",
-          "cumulative_return": 0.014153295184465176,
-          "sharpe_ratio": 0.17192271620809627,
-          "max_drawdown": 0.007610156771712617
-        },
-        {
-          "model_id": "moira2-top3",
-          "cumulative_return": 0.0096485001932618,
-          "sharpe_ratio": 0.09697784000459508,
-          "max_drawdown": 0.019907876226411547
-        },
-        {
-          "model_id": "finmem",
-          "cumulative_return": 0.008409434578976915,
-          "sharpe_ratio": 0.21803627114101387,
-          "max_drawdown": 0.006518607984470459
-        },
-        {
-          "model_id": "moira2-top5",
-          "cumulative_return": 0.00811923312184848,
-          "sharpe_ratio": 0.08250627048961881,
-          "max_drawdown": 0.02152383360328114
-        },
-        {
           "model_id": "codex",
-          "cumulative_return": 0.005704176822003193,
-          "sharpe_ratio": 0.055199886175594605,
+          "cumulative_return": 0.027084929021534476,
+          "sharpe_ratio": 0.1926542247628824,
           "max_drawdown": 0.024163070735393477
         },
         {
+          "model_id": "moira2-top3",
+          "cumulative_return": 0.01993648143469784,
+          "sharpe_ratio": 0.1789894313427546,
+          "max_drawdown": 0.019907876226411547
+        },
+        {
+          "model_id": "moira2-top5",
+          "cumulative_return": 0.0183916316422279,
+          "sharpe_ratio": 0.16595254092701467,
+          "max_drawdown": 0.02152383360328114
+        },
+        {
+          "model_id": "moira2-top1",
+          "cumulative_return": 0.008379708297240551,
+          "sharpe_ratio": 0.09567236110554109,
+          "max_drawdown": 0.0113979117475006
+        },
+        {
+          "model_id": "finmem",
+          "cumulative_return": 0.0006601119492033458,
+          "sharpe_ratio": 0.01409070244234805,
+          "max_drawdown": 0.011147596363442536
+        },
+        {
           "model_id": "moira",
-          "cumulative_return": -0.010857387259135876,
-          "sharpe_ratio": -0.3434099562296741,
-          "max_drawdown": 0.012166864251150322
+          "cumulative_return": -0.018458650168964308,
+          "sharpe_ratio": -0.4263111441481836,
+          "max_drawdown": 0.019758064224894123
         }
       ],
       "series": [
@@ -610,6 +634,10 @@
             {
               "step": 16,
               "equity": 1.0057041768220032
+            },
+            {
+              "step": 17,
+              "equity": 1.0270849290215345
             }
           ]
         },
@@ -683,6 +711,10 @@
             {
               "step": 16,
               "equity": 1.008409434578977
+            },
+            {
+              "step": 17,
+              "equity": 1.0006601119492033
             }
           ]
         },
@@ -756,6 +788,10 @@
             {
               "step": 16,
               "equity": 0.9891426127408641
+            },
+            {
+              "step": 17,
+              "equity": 0.9815413498310357
             }
           ]
         },
@@ -829,6 +865,10 @@
             {
               "step": 16,
               "equity": 1.0141532951844652
+            },
+            {
+              "step": 17,
+              "equity": 1.0083797082972406
             }
           ]
         },
@@ -902,6 +942,10 @@
             {
               "step": 16,
               "equity": 1.0096485001932618
+            },
+            {
+              "step": 17,
+              "equity": 1.0199364814346978
             }
           ]
         },
@@ -975,6 +1019,10 @@
             {
               "step": 16,
               "equity": 1.0081192331218485
+            },
+            {
+              "step": 17,
+              "equity": 1.018391631642228
             }
           ]
         }
@@ -1259,12 +1307,12 @@
       ],
       "tokens_coverage": "partial",
       "shared_tokens": {
-        "input_tokens": 296173,
+        "input_tokens": 317518,
         "cached_input_tokens": 0,
-        "output_tokens": 104393,
-        "total_tokens": 400566,
+        "output_tokens": 111655,
+        "total_tokens": 429173,
         "training_tokens": 0,
-        "inference_tokens": 400566
+        "inference_tokens": 429173
       },
       "shared_tokens_coverage": "complete"
     }
@@ -1277,7 +1325,7 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 19.31759507,
+    "spent_usd": 19.33775227,
     "reserved_usd": 0.17641449999999992,
     "warning_usd": 20,
     "limit_usd": 100,
