@@ -10,7 +10,7 @@ const IDS=MODEL_REGISTRY.map(model=>model.id),BY_ID=new Map(MODEL_REGISTRY.map(m
 export const PERIOD=Object.freeze({start:'2026-11-02T09:30:00-05:00',last_release:'2027-05-21T15:30:00-04:00',final_settlement:'2027-05-24T10:30:00-04:00'});
 export const feedUrl=new URL('state.json',import.meta.url).href;
 const TOKEN_FIELDS=['input_tokens','cached_input_tokens','output_tokens','total_tokens','training_tokens','inference_tokens'];
-const DISPLAY_TOKEN_FIELDS=['input_tokens','cached_input_tokens','output_tokens','total_tokens','inference_tokens'];
+const DISPLAY_TOKEN_FIELDS=['training_tokens','inference_tokens','input_tokens','cached_input_tokens','output_tokens','total_tokens'];
 const STATUSES=['scheduled','live','pending','finished'];
 const COVERAGE=['complete','partial','unavailable'];
 const fail=message=>{throw new Error(message)};
