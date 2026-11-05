@@ -105,7 +105,50 @@ def _audits(gateway, model_id):
     return result
 
 
-def _actual_proof(row, native, observation, prompt, audits):
+def _source_projections(gateway, model_id):
+    root = getattr(getattr(gateway, 'budget', None), 'root', None)
+    if root is None: return ()
+    directory = Path(root)/'models'/model_id/'prompt-source-projections'
+    result = []
+    for path in sorted(directory.glob('*.json')):
+        if path.is_symlink() or not path.resolve().is_relative_to(directory.resolve()):
+            raise RuntimeError('Actual prompt source projections must be local immutable files')
+        result.append((path.stem, read_json(path)))
+    return tuple(result)
+
+
+def _compact_source_proof(call, native, observation, projections):
+    """Bind a compact wire view to its actual pre-call full-source projection."""
+    from .prompt_projection import compact_observation
+    payload = call['payload']; matches = []
+    for identity, document in projections:
+        if not isinstance(document, dict): raise RuntimeError('Malformed actual prompt source projection')
+        if document.get('projected_payload_sha256') != digest(payload): continue
+        proof = {key:value for key,value in document.items() if key != 'recorded_at'}
+        if (document.get('schema') != 'moira.prompt-source-projection/1'
+                or document.get('task_type') != 'daily_direction' or digest(proof) != identity):
+            raise RuntimeError('Actual prompt source projection identity changed')
+        try:
+            recorded = aware(document['recorded_at'])
+            started = aware(call.get('started_at', call['generated_at']))
+            generated = aware(call['generated_at'])
+            raw = document['original_observation']
+            same = (aware(raw['timestamp']) == aware(observation.timestamp)
+                and all(raw.get(key) == observation.as_dict()[key] for key in ('round_id','prices','news'))
+                and set(raw['prices']) == set(TICKERS) and set(raw['news']) == set(TICKERS))
+            if (not recorded <= started <= generated or not same
+                    or not native.get('input_sha256') or digest(raw) != native['input_sha256']
+                    or compact_observation(raw, tickers=payload['active_pair']) != payload['current_observation']):
+                raise ValueError('Projected input/source or original decision identity changed')
+        except (ValueError, TypeError, KeyError) as error:
+            raise RuntimeError('Compact actual-decision source proof failed verification') from error
+        matches.append({'source_projection_sha256':identity,'original_observation_sha256':digest(raw)})
+    if not matches:
+        raise RuntimeError('Compact actual-decision evidence requires its genuine pre-call source projection')
+    return matches[-1]
+
+
+def _actual_proof(row, native, observation, prompt, audits, projections=()):
     reason = native.get('action', {}).get('reason')
     if not isinstance(reason, str) or not reason.strip(): return None
     result = []
@@ -113,11 +156,6 @@ def _actual_proof(row, native, observation, prompt, audits):
         if call.get('task_type') != 'daily_direction' or call.get('error_type'): continue
         payload = call.get('payload', {}); actual = payload.get('current_observation', {})
         if not isinstance(call.get('system_prompt'), str) or not call['system_prompt'].startswith(prompt): continue
-        try:
-            if aware(actual['timestamp']) != aware(observation.timestamp):continue
-        except (ValueError, TypeError, KeyError):continue
-        if any(actual.get(key) != observation.as_dict()[key] for key in ('round_id','prices','news')): continue
-        if native.get('input_sha256') and digest(actual) != native['input_sha256']: continue
         if payload.get('active_pair') != [row['action']['stock1'], row['action']['stock2']]: continue
         try:
             generated = aware(call['generated_at']); accepted = aware(row['generated_at'])
@@ -127,12 +165,22 @@ def _actual_proof(row, native, observation, prompt, audits):
         if (not isinstance(response, dict) or labels.get(response.get('action')) != row['action']['action']
                 or str(response.get('direction_reason') or response.get('reason') or '').strip() != reason.strip()
                 or generated > accepted or (accepted-generated).total_seconds() > 60): continue
-        result.append({'audit_record_sha256':digest(call), 'system_prompt_sha256':digest(call['system_prompt']),
+        source = {}
+        if ('round_id' not in actual or set(actual.get('prices', {})) != set(TICKERS)
+                or set(actual.get('news', {})) != set(TICKERS)):
+            source = _compact_source_proof(call,native,observation,projections)
+        else:
+            try:
+                if aware(actual['timestamp']) != aware(observation.timestamp): continue
+            except (ValueError, TypeError, KeyError): continue
+            if any(actual.get(key) != observation.as_dict()[key] for key in ('round_id','prices','news')): continue
+            if native.get('input_sha256') and digest(actual) != native['input_sha256']: continue
+        result.append({**source, 'audit_record_sha256':digest(call), 'system_prompt_sha256':digest(call['system_prompt']),
             'actual_generated_at':generated.isoformat(), 'actual_reason':reason.strip()})
     return result[-1] if result else None
 
 
-def _cases(dataset, live_state, live_decisions, model_id, prompt, audits):
+def _cases(dataset, live_state, live_decisions, model_id, prompt, audits, projections=()):
     cases = []; accepted = []; native_records = []
     for observation in dataset.observations:
         label = dataset.executions.get(observation.action_id)
@@ -164,7 +212,7 @@ def _cases(dataset, live_state, live_decisions, model_id, prompt, audits):
             if _action(native['action']) != action: raise ValueError('Native and accepted book actions disagree')
             if native['action'].get('generated_at') and aware(native['action']['generated_at']) != aware(row['generated_at']):
                 raise ValueError('Actual native decision generation time changed')
-            proof = _actual_proof(row,native,observation,prompt,audits)
+            proof = _actual_proof(row,native,observation,prompt,audits,projections)
             native_records.append(copy.deepcopy(native))
         case_id = 'case:'+digest({'model_id':model_id,'decision':row,'execution':{
             'entry':dict(label.entry_prices),'exit':dict(label.exit_prices)}})[:24]
@@ -296,8 +344,8 @@ def review_weekly_beliefs(dataset,prepared,bundle,directory,gateway,model_id,*,l
     if directory==repo or repo in directory.parents:raise ValueError('Belief review and actual decision evidence must remain private')
     with locked(directory/'review.lock',nonblocking=True):
         prompt_hash=_prompt_hash(prepared);clean,frozen=_dataset(dataset);beliefs,inactive=_beliefs(prepared)
-        audits=_audits(gateway,model_id)
-        cases,accepted,native_records=_cases(clean,live_state,live_decisions,model_id,prepared['prompt_memory']['active_prompt'],audits)
+        audits=_audits(gateway,model_id);projections=_source_projections(gateway,model_id)
+        cases,accepted,native_records=_cases(clean,live_state,live_decisions,model_id,prepared['prompt_memory']['active_prompt'],audits,projections)
         attributable=[c for c in cases if c['belief_prompt_evidence'] is not None]
         fingerprint=digest({'model_id':model_id,'memory_policy_protocol':protocol,'dataset':frozen,'prepared':prepared,'bundle':bundle,'accepted_live_decisions':accepted,
             'native_records':native_records,'cases':cases,'beliefs':beliefs})

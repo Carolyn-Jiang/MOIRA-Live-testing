@@ -103,6 +103,90 @@ class BeliefReviewTests(unittest.TestCase):
         return review.review_weekly_beliefs(self.dataset,self.prepared,self.bundle,self.directory,self.gateway,self.model,
             live_state=self.state,live_decisions=self.decisions)
 
+    def compact_audits(self):
+        from live_testing.prompt_projection import compact_observation, observation_reference_map
+        directory=self.root/'models'/self.model/'prompt-source-projections'
+        directory.mkdir(parents=True,exist_ok=True);paths=[]
+        observations=[]
+        for i,row in enumerate(self.observations):
+            news={ticker:[f'Published {(row.timestamp-timedelta(minutes=1)).isoformat()} [source-uuid-{i}-{ticker}]: A synthetic reported observation.'] for ticker in TICKERS}
+            observations.append(Observation(row.action_id,row.timestamp,row.prices,news,row.available_at))
+        self.observations=tuple(observations)
+        self.dataset=WeeklyDataset(self.cutoff,self.observations,self.dataset.executions,())
+        for row,call in zip(self.observations,self.audits):
+            raw={**row.as_dict(),'news_coverage':{},'news_protocol':'individual_10_to_50_token_article_summaries'}
+            original=copy.deepcopy(call['payload']);original['current_observation']=copy.deepcopy(raw)
+            payload={**original,'current_observation':compact_observation(raw,tickers=original['active_pair'])}
+            call['payload']=payload;call['payload_sha256']=digest(payload)
+            call['started_at']=(row.timestamp+timedelta(seconds=50)).isoformat()
+            self.state['decisions'][row.action_id]['input_sha256']=digest(raw)
+            proof={'schema':'moira.prompt-source-projection/1','task_type':'daily_direction',
+                'original_payload':original,'original_observation':raw,'projected_payload_sha256':digest(payload),
+                'news_references':observation_reference_map(raw,tickers=original['active_pair']),
+                'native_prompt_references':{},'company_context_sha256':None,'company_references':{}}
+            path=directory/(digest(proof)+'.json')
+            write_private(path,{**proof,'recorded_at':(row.timestamp+timedelta(seconds=49)).isoformat()});paths.append(path)
+        self.write_audits();return paths
+
+    def test_compact_actual_proof_binds_original_full_observation_and_preserves_actual_audit_hash(self):
+        paths=self.compact_audits();before=copy.deepcopy((self.prepared,self.state,self.decisions,self.audits))
+        result=self.run_review();self.assertTrue(result['applied'])
+        cases=read_json(self.directory/'failed-cases.json')['cases']
+        for case in cases:
+            index=next(i for i,row in enumerate(self.observations) if row.action_id==case['action_id'])
+            proof=case['belief_prompt_evidence'];self.assertEqual(proof['audit_record_sha256'],digest(self.audits[index]))
+            self.assertEqual(proof['source_projection_sha256'],paths[index].stem)
+            self.assertEqual(proof['original_observation_sha256'],self.state['decisions'][case['action_id']]['input_sha256'])
+            actual=self.audits[index]['payload']['current_observation']
+            self.assertNotIn('round_id',actual);self.assertEqual(set(actual['prices']),{'NVDA','GOOG'})
+            self.assertNotIn('source-uuid-',json.dumps(actual));self.assertIn('source-uuid-',paths[index].read_text())
+        self.assertEqual((self.prepared,self.state,self.decisions,self.audits),before)
+
+    def test_compact_missing_projection_holds_before_review_or_native_calls(self):
+        paths=self.compact_audits();paths[0].unlink()
+        with self.assertRaisesRegex(RuntimeError,'genuine pre-call'):self.run_review()
+        self.assertEqual(self.gateway.calls,[]);self.assertEqual(Adapter.starts,[])
+        self.assertFalse((self.directory/'review-result.json').exists())
+
+    def test_compact_tampered_source_digest_or_native_binding_holds(self):
+        for kind in ('unchanged_filename','renamed_changed_source','native_hash'):
+            with self.subTest(kind=kind):
+                paths=self.compact_audits();path=paths[0];document=read_json(path)
+                if kind=='native_hash':
+                    self.state['decisions'][self.observations[0].action_id]['input_sha256']='0'*64
+                else:
+                    document['original_observation']['prices']['TSLA']+=1
+                    if kind=='renamed_changed_source':
+                        path.unlink();path=path.with_name(digest({k:v for k,v in document.items() if k!='recorded_at'})+'.json')
+                    write_private(path,document)
+                with self.assertRaises(RuntimeError):self.run_review()
+                self.assertEqual(self.gateway.calls,[]);self.assertEqual(Adapter.starts,[])
+                # Restore pristine synthetic fixtures between counterexamples.
+                for saved in path.parent.glob('*.json'):saved.unlink()
+
+    def test_compact_modified_wire_even_with_new_claimed_payload_hash_does_not_pass(self):
+        self.compact_audits();self.audits[0]['payload']['current_observation']['prices']['NVDA']+=1
+        self.audits[0]['payload_sha256']=digest(self.audits[0]['payload']);self.write_audits()
+        with self.assertRaises(RuntimeError):self.run_review()
+        self.assertEqual(self.gateway.calls,[]);self.assertEqual(Adapter.starts,[])
+
+    def test_compact_wire_must_equal_recomputed_pair_view_even_when_projection_hash_is_rewritten(self):
+        paths=self.compact_audits();call=self.audits[0]
+        call['payload']['current_observation']['news']['NVDA'][0]='Invented replacement news.'
+        call['payload_sha256']=digest(call['payload']);self.write_audits()
+        document=read_json(paths[0]);document['projected_payload_sha256']=digest(call['payload'])
+        paths[0].unlink();path=paths[0].with_name(digest({k:v for k,v in document.items() if k!='recorded_at'})+'.json')
+        write_private(path,document)
+        with self.assertRaisesRegex(RuntimeError,'failed verification'):self.run_review()
+        self.assertEqual(self.gateway.calls,[]);self.assertEqual(Adapter.starts,[])
+
+    def test_compact_posthoc_projection_cannot_establish_earlier_prompt_evidence(self):
+        paths=self.compact_audits();document=read_json(paths[0])
+        document['recorded_at']=(self.observations[0].timestamp+timedelta(minutes=2)).isoformat()
+        write_private(paths[0],document)
+        with self.assertRaisesRegex(RuntimeError,'failed verification'):self.run_review()
+        self.assertEqual(self.gateway.calls,[]);self.assertEqual(Adapter.starts,[])
+
     def test_edit_requires_real_reason_prompt_evidence_and_two_isolated_native_replays(self):
         original=copy.deepcopy((self.prepared,self.state,self.decisions))
         result=self.run_review()
