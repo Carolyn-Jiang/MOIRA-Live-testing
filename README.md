@@ -27,6 +27,8 @@ The ten eligible tickers are NVDA, GOOG, META, MSFT, JPM, AMZN, AAPL, AMD, WMT a
 
 One immutable memory unit represents one exited action, its actual and LS/SL/F counterfactual returns, a whole reflection and source/availability provenance. Each model version has an independent bank; training and live namespaces are distinct. Incomplete or future outcomes cannot enter retrieval.
 
+Model inputs use a compact source projection. Complete source IDs, original inputs and audit metadata remain in local immutable records; prompts use short article references. Pair selection can consider the universe, while a selected pair's operating context and current observation contain only its two tickers. Retrieved Moira memory contains the complete experiential reflection and its citation ID, without ranking or provenance metadata. One settled action produces one news-free counterfactual experience from its actual and LS/SL/F outcomes; historical raw text and embeddings are retained unchanged. Existing LOO comparisons continue to use their exact frozen original request with only the cited unit removed.
+
 The current, versioned retrieval score is:
 
 ```text
@@ -111,6 +113,8 @@ The simulator uses equal half-weight long/short legs with unit gross exposure. L
 Sharpe is the mean completed interval return divided by sample standard deviation (`ddof=1`), zero risk-free rate, without annualization. Zero or numerically negligible volatility produces N/A. Maximum drawdown is nonnegative `max(1 − equity/running_peak)`, including initial equity 1 and settlement observations only. Weekly views independently restart from equity 1; all-time equity carries across weeks.
 
 Provider input, cached-input, output and total token counts are measured, not guessed. Cached input is a subset of input. Training and inference classify usage by purpose. Shared news-processing tokens are reported separately instead of inventing a seventh ranked model. Imported usage with no source evidence remains unavailable, not zero.
+
+Trading is a subset of nontraining usage: current accepted direction requests and verified 15:30 pair reselections only. Relationship monitoring, LOO attribution and all remaining nontraining requests have separate counters. Initial selection, embeddings, superseded requests and historical attempts still count in Total; failed requests with unknown usage retain incomplete coverage. Classification binds the accepted book to original request evidence and does not regenerate decisions. Both the book and the usage ledger are hash-pinned in the local classification catalog.
 
 **Estimated Cost** applies the recorded standard rates to reported token usage; it is not an invoice or a platform Costs export. Billed spend comes from the provider's billing records. Reconcile the same account, project and time range before treating a difference as an accounting error; preserve the original usage and reservation records.
 

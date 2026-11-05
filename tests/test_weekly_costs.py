@@ -28,11 +28,12 @@ class WeeklyCostTests(unittest.TestCase):
         self.assertEqual((book,ledger),original)
         self.assertNotIn('estimated_cost_usd',feed['weeks'][0]['shared_tokens'])
 
-    def test_unknown_transport_fee_uses_its_retained_bound_once_and_marks_partial(self):
+    def test_unknown_transport_reservation_is_separate_from_measured_cost(self):
         book,asof=populated();ledger=budget({'known':call(actual_cost_usd=.05,guard_cost_usd=.05),
             'failed':call(status='failed',actual_cost_usd=None,guard_cost_usd=.15)})
         row=model_row(build_feed(book,asof=asof,budget_ledger=ledger),'finmem')
-        self.assertAlmostEqual(row['estimated_cost_usd'],.2)
+        self.assertAlmostEqual(row['estimated_cost_usd'],.05)
+        self.assertAlmostEqual(row['reserved_cost_usd'],.15)
         self.assertEqual(row['cost_coverage'],'partial')
         self.assertIsNone(row['total_tokens'])
         self.assertEqual(ledger['calls']['failed']['guard_cost_usd'],.15)

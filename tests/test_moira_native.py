@@ -108,7 +108,9 @@ class NativeTests(unittest.TestCase):
         payload = next(value for task, value in self.gateway.calls if task=='daily_direction')
         self.assertNotIn('past_3_days_direction_memory', payload)
         self.assertEqual(len(payload['ranked_counterfactual_reflections']), 3)
-        self.assertTrue(all(set(v['counterfactual_returns'])=={'LS','SL','F'} for v in payload['ranked_counterfactual_reflections']))
+        self.assertTrue(all(set(v)=={'unit_id','reflection'} for v in payload['ranked_counterfactual_reflections']))
+        self.assertTrue(all('LS +1%' in v['reflection'] and 'SL -1%' in v['reflection'] and 'F +0%' in v['reflection']
+            for v in payload['ranked_counterfactual_reflections']))
         entry = {t: 100. for t in m.TICKERS}; exit_prices = {**entry, 'NVDA': 102.}
         record = {'release_at': obs['timestamp'], 'entry_at': '2026-11-02T10:30:00-05:00',
             'exit_at': '2026-11-02T11:30:00-05:00', 'settled_at': '2026-11-02T11:31:00-05:00',
@@ -192,9 +194,10 @@ class NativeTests(unittest.TestCase):
         directions=[p for task,p in self.gateway.calls if task=='daily_direction']
         self.assertTrue(all('ranked_counterfactual_reflections' in p for p in directions))
         self.assertEqual([len(p['ranked_counterfactual_reflections']) for p in directions[:4]],[0,0,1,1])
-        self.assertTrue(all(m.aware(u['exit_at'])<=m.aware(p['current_observation']['timestamp'])
-            for p in directions for u in p['ranked_counterfactual_reflections']))
         state=read_json(adapter.last_policy.directory/'live-state.json')
+        units={row['unit']['unit_id']:row['unit'] for row in state['memory_bank']['units']}
+        self.assertTrue(all(m.aware(units[u['unit_id']]['exit_at'])<=m.aware(p['current_observation']['timestamp'])
+            for p in directions for u in p['ranked_counterfactual_reflections']))
         self.assertEqual(len(state['memory_bank']['units']),4)
 
 

@@ -29,7 +29,10 @@ test('constant positive returns use the same floating-point zero-volatility thre
 test('weekly token counts distinguish unavailable from measured zero, enforce accounting and retain partial imports',()=>{const state=verified();assert.doesNotThrow(()=>validateTokens(state.weeks[0].tokens));assert.equal(formatTokens(null),'Unavailable');assert.equal(formatTokens(0),'0');assert.equal(formatTokens(20000),'20,000');for(const edit of [rows=>rows[1].cached_input_tokens=121,rows=>rows[1].total_tokens=151,rows=>rows[1].training_tokens=1,rows=>rows[1].input_tokens=-1,rows=>rows[1].model_id='codex']){const rows=structuredClone(state.weeks[0].tokens);edit(rows);assert.throws(()=>validateTokens(rows))}state.weeks[0].tokens_coverage='partial';assert.doesNotThrow(()=>validateState(state))});
 
 const tokenFields=['input_tokens','cached_input_tokens','output_tokens','total_tokens','training_tokens','inference_tokens'];
-function tokenMetadata(row){row.recorded_tokens=Object.fromEntries(tokenFields.map(field=>[field,row[field]]));row.token_coverage=Object.fromEntries(tokenFields.map(field=>[field,row[field]===null?'unavailable':'complete']));return row}
+const purposeFields=['trading_tokens','direction_decision_tokens','pair_reselection_tokens','relationship_monitor_tokens','loo_attribution_tokens','other_inference_tokens'];
+function classified(row,values={}){return Object.assign(row,Object.fromEntries(purposeFields.map(field=>[field,null])),values)}
+function tokenMetadata(row){const fields=Object.hasOwn(row,'trading_tokens')?[...tokenFields,...purposeFields]:tokenFields;row.recorded_tokens=Object.fromEntries(fields.map(field=>[field,row[field]]));row.token_coverage=Object.fromEntries(fields.map(field=>[field,row[field]===null?'unavailable':'complete']));return row}
+function breakdown(cells,field){return cells[0].children[0].children[1].children.find(item=>item.dataset.tokenField===field).children[1]}
 function partialUsage(){const state=verified(),row=tokenMetadata(state.weeks[0].tokens[0]);for(const[field,value]of Object.entries({input_tokens:12345,cached_input_tokens:0,total_tokens:13000,inference_tokens:13000})){row.recorded_tokens[field]=value;row.token_coverage[field]='partial'}tokenMetadata(state.weeks[0].tokens[1]);return state}
 
 test('recorded token metadata distinguishes exact totals, lower bounds and genuinely unavailable fields',()=>{
@@ -62,18 +65,19 @@ test('recorded token metadata rejects mismatched completeness, unsafe counts and
 test('usage cells disclose recorded lower bounds accessibly without changing costs, rankings or paths',()=>{
   const state=partialUsage(),before=structuredClone(state.all_time),{nodes,document}=fakeDocument();
   createDashboard(document).render(state);const cells=nodes.get('token-usage').children[0].children;
-  assert.equal(cells[3].textContent,'≥12,345');assert.equal(cells[4].textContent,'≥0');assert.equal(cells[5].textContent,'Unavailable');
-  assert.equal(cells[3].attributes.title,'Recorded subtotal; some provider usage is unavailable.');
-  assert.match(cells[3].attributes['aria-label'],/≥12,345.*Recorded subtotal/);assert.match(cells[3].className,/token-partial/);
-  assert.equal(nodes.get('token-usage').children[1].children[3].textContent,'120');
-  assert.equal(nodes.get('token-usage').children[1].children[7].textContent,'~$0.01');
+  assert.equal(breakdown(cells,'input_tokens').textContent,'≥12,345');assert.equal(breakdown(cells,'cached_input_tokens').textContent,'≥0');assert.equal(breakdown(cells,'output_tokens').textContent,'Unavailable');
+  assert.equal(breakdown(cells,'input_tokens').attributes.title,'Recorded subtotal; some provider usage is unavailable.');
+  assert.match(breakdown(cells,'input_tokens').attributes['aria-label'],/≥12,345.*Recorded subtotal/);assert.match(breakdown(cells,'input_tokens').className,/token-partial/);
+  assert.equal(breakdown(nodes.get('token-usage').children[1].children,'input_tokens').textContent,'120');
+  assert.equal(nodes.get('token-usage').children[1].children[4].textContent,'~$0.01');
+  assert.equal(cells[2].textContent,'Unavailable');assert.equal(cells[3].textContent,'≥13,000');
   assert.deepEqual(state.all_time,before);assert.equal(nodes.get('return-chart').children[0].children.filter(n=>n.tagName==='polyline').length,6);
   const onlyPartial=initial();onlyPartial.weeks[0].tokens[0]=state.weeks[0].tokens[0];onlyPartial.weeks[0].tokens_coverage='partial';
   createDashboard(document).render(onlyPartial);assert.match(nodes.get('usage-status').textContent,/partial coverage/);
   assert.equal(nodes.get('rankings').children[0].children[2].textContent,'Awaiting data');
   const html=readFileSync(new URL('../docs/index.html',import.meta.url),'utf8');
   assert.match(html,/≥ denotes a recorded lower bound/);assert.match(html,/\* Cost estimate based on available records/);
-  assert.match(html,/app\.js\?v=20261105-training-trading/);assert.ok(!/id="budget-status"|\$20|\$100/.test(html));
+  assert.match(html,/app\.js\?v=20261105-trading-breakdown/);assert.ok(!/id="budget-status"|\$20|\$100/.test(html));
 });
 
 test('budget is a NY month aggregate with fixed warning and hard stop, never inferred zero',()=>{assert.doesNotThrow(()=>validateState(verified()));for(const edit of [s=>s.budget.spent_usd=-1,s=>s.budget.limit_usd=200,s=>s.budget.reserved_usd=NaN,s=>s.budget.token='secret']){const state=verified();edit(state);assert.throws(()=>validateState(state))}const state=initial();state.budget={month:'2026-11',spent_usd:null,reserved_usd:null,warning_usd:20,limit_usd:100,status:'unavailable'};assert.doesNotThrow(()=>validateState(state))});
@@ -89,9 +93,9 @@ test('weekly estimated model costs accompany separate training and trading total
     const copy=structuredClone(rows);edit(copy[0]);assert.throws(()=>validateTokens(copy));
   }
   const {nodes,document}=fakeDocument();createDashboard(document).render(state);
-  assert.equal(nodes.get('token-usage').children[0].children.length,8);
-  assert.equal(nodes.get('token-usage').children[0].children[7].textContent,'~$0.13*');
-  assert.match(nodes.get('token-usage').children[0].children[7].attributes.title,/incomplete/);
+  assert.equal(nodes.get('token-usage').children[0].children.length,5);
+  assert.equal(nodes.get('token-usage').children[0].children[4].textContent,'~$0.13*');
+  assert.match(nodes.get('token-usage').children[0].children[4].attributes.title,/incomplete/);
   const html=readFileSync(new URL('../docs/index.html',import.meta.url),'utf8');
   assert.match(html,/>Estimated Cost<\/th>/);assert.match(html,/>Training<\/th>/);assert.match(html,/>Trading<\/th>/);assert.ok(!/id="budget-status"|\$20|\$100/.test(html));
 });
@@ -100,22 +104,68 @@ test('shared news-processing tokens are a separate safe aggregate, never a seven
 
 test('training and trading retain independent completeness instead of subtracting from an unknown total',()=>{
   const state=verified(),rows=state.weeks[0].tokens;
-  rows[2]=tokenMetadata({model_id:'moira',input_tokens:300,cached_input_tokens:40,output_tokens:30,
-    total_tokens:330,training_tokens:200,inference_tokens:130});
-  rows[3]={model_id:'moira2-top1',...Object.fromEntries(tokenFields.map(field=>[field,null])),
-    training_tokens:80,recorded_tokens:{input_tokens:100,cached_input_tokens:0,output_tokens:10,
-      total_tokens:110,training_tokens:80,inference_tokens:30},
-    token_coverage:Object.fromEntries(tokenFields.map(field=>[field,field==='training_tokens'?'complete':'partial']))};
+  rows[2]=tokenMetadata(classified({model_id:'moira',input_tokens:300,cached_input_tokens:40,output_tokens:30,
+    total_tokens:330,training_tokens:200,inference_tokens:130},{trading_tokens:90,direction_decision_tokens:80,
+      pair_reselection_tokens:10,relationship_monitor_tokens:20,loo_attribution_tokens:15,other_inference_tokens:5}));
+  rows[3]=tokenMetadata(classified({model_id:'moira2-top1',...Object.fromEntries(tokenFields.map(field=>[field,null])),training_tokens:80}));
+  for(const[field,value]of Object.entries({input_tokens:100,cached_input_tokens:0,output_tokens:10,total_tokens:110,inference_tokens:30,trading_tokens:20,direction_decision_tokens:15,pair_reselection_tokens:5,relationship_monitor_tokens:4,loo_attribution_tokens:3,other_inference_tokens:3})){rows[3].recorded_tokens[field]=value;rows[3].token_coverage[field]='partial'}
   assert.doesNotThrow(()=>validateState(state));
   const before=structuredClone(state),{nodes,document}=fakeDocument();createDashboard(document).render(state);
   const exact=nodes.get('token-usage').children[2].children,partial=nodes.get('token-usage').children[3].children;
-  assert.equal(exact[1].textContent,'200');assert.equal(exact[2].textContent,'130');
-  assert.equal(partial[6].textContent,'≥110');assert.equal(partial[1].textContent,'80');
-  assert.equal(partial[2].textContent,'≥30');assert.match(partial[2].attributes['aria-label'],/Recorded subtotal/);
+  assert.equal(exact[1].textContent,'200');assert.equal(exact[2].textContent,'90');
+  assert.equal(partial[3].textContent,'≥110');assert.equal(partial[1].textContent,'80');
+  assert.equal(partial[2].textContent,'≥20');assert.match(partial[2].attributes['aria-label'],/Recorded subtotal/);
   assert.deepEqual(state,before);
 });
 
-test('rendering preserves weekly controls, six ranked rows and safe locally generated SVG paths',()=>{const {nodes,document}=fakeDocument();const dashboard=createDashboard(document);dashboard.render(initial());assert.equal(nodes.get('rankings').children.length,6);assert.equal(nodes.get('rankings').children[0].children[2].textContent,'Awaiting data');assert.equal(nodes.get('token-usage').children[0].children[1].textContent,'Unavailable');assert.equal(nodes.get('return-chart').children[0].tagName,'div');dashboard.render(verified());assert.equal(nodes.get('rankings').children.length,6);assert.equal(nodes.get('rankings').children[0].children[1].children[0].children[1].textContent,'Moira 2.0 · Top K = 5');const svg=nodes.get('return-chart').children[0];assert.equal(svg.tagName,'svg');assert.equal(svg.attributes.role,'img');assert.equal(svg.children.filter(node=>node.tagName==='polyline').length,6);assert.equal(nodes.get('chart-legend').children.length,6);nodes.get('performance-view').events.change({target:{value:'2026-W45'}});assert.equal(nodes.get('view-label').textContent,'2–6 November 2026');dashboard.render(verified());assert.equal(nodes.get('performance-view').value,'2026-W45');assert.match(nodes.get('usage-status').textContent,/partial coverage/);assert.equal(nodes.get('token-usage').children[1].children[1].textContent,'0');assert.equal(nodes.get('token-usage').children[1].children[2].textContent,'150');assert.equal(nodes.get('token-usage').children[1].children[7].textContent,'~$0.01');assert.equal(nodes.has('budget-status'),false);assert.match(nodes.get('next-release').textContent,/12:30/);assert.ok(!JSON.stringify(svg).includes('stock1'));assert.ok(!JSON.stringify(svg).includes('api_key'))});
+function classifiedUsage(){const state=verified();state.weeks[0].tokens[1]=tokenMetadata(classified(state.weeks[0].tokens[1],{trading_tokens:90,direction_decision_tokens:80,pair_reselection_tokens:10,relationship_monitor_tokens:30,loo_attribution_tokens:20,other_inference_tokens:10}));state.weeks[0].tokens[1].reserved_cost_usd=.75;return state}
+
+test('verified classification is an all-or-none safe bundle with independent purpose arithmetic',()=>{
+  const state=classifiedUsage();assert.doesNotThrow(()=>validateState(state));
+  assert.equal(Object.keys(state.weeks[0].tokens[1].recorded_tokens).length,12);
+  for(const edit of [r=>delete r.trading_tokens,r=>r.direction_decision_tokens=-1,
+    r=>r.other_inference_tokens=Infinity,r=>r.trading_tokens=91,r=>r.loo_attribution_tokens=21,
+    r=>delete r.recorded_tokens.loo_attribution_tokens,r=>delete r.token_coverage.trading_tokens,
+    r=>r.recorded_tokens.raw_response='private',r=>r.trading_tokens=Number.MAX_SAFE_INTEGER+1]){
+    const copy=structuredClone(state.weeks[0].tokens);edit(copy[1]);assert.throws(()=>validateTokens(copy));
+  }
+  // Classification may genuinely be absent from an older feed even when all
+  // nontraining usage is known. It must not be relabeled as trading.
+  const {nodes,document}=fakeDocument();createDashboard(document).render(verified());
+  const cells=nodes.get('token-usage').children[1].children;
+  assert.equal(cells[2].textContent,'Unavailable');assert.equal(cells[3].textContent,'150');
+  assert.equal(breakdown(cells,'inference_tokens').textContent,'150');
+  assert.equal(formatTokenField(state.weeks[0].tokens[0],'trading_tokens'),'Unavailable');
+  const nulls=classified(initial().weeks[0].tokens[0]);assert.doesNotThrow(()=>validateTokens([nulls,...initial().weeks[0].tokens.slice(1)]));
+});
+
+test('model expansion retains actual usage and a separately labeled conservative reservation',()=>{
+  const state=classifiedUsage(),before=structuredClone(state),{nodes,document}=fakeDocument();
+  createDashboard(document).render(state);const cells=nodes.get('token-usage').children[1].children;
+  assert.equal(cells.length,5);assert.deepEqual(cells.slice(1).map(cell=>cell.textContent),['0','90','150','~$0.01']);
+  const details=cells[0].children[0];assert.equal(details.tagName,'details');assert.equal(details.children[0].tagName,'summary');
+  assert.equal(details.children[0].children[0].className,'model-name');
+  assert.equal(details.children[0].children[0].children[1].textContent,'FinMem');
+  assert.equal(breakdown(cells,'input_tokens').textContent,'120');assert.equal(breakdown(cells,'cached_input_tokens').textContent,'20');
+  assert.equal(breakdown(cells,'output_tokens').textContent,'30');assert.equal(breakdown(cells,'direction_decision_tokens').textContent,'80');
+  assert.equal(breakdown(cells,'pair_reselection_tokens').textContent,'10');assert.equal(breakdown(cells,'relationship_monitor_tokens').textContent,'30');
+  assert.equal(breakdown(cells,'loo_attribution_tokens').textContent,'20');assert.equal(breakdown(cells,'other_inference_tokens').textContent,'10');
+  const reservation=details.children[1].children.at(-1);assert.equal(reservation.children[0].textContent,'Conservative reservation (USD)');assert.equal(reservation.children[1].textContent,'$0.7500');
+  assert.deepEqual(state,before);assert.equal(nodes.get('return-chart').children[0].children.filter(node=>node.tagName==='polyline').length,6);
+  const html=readFileSync(new URL('../docs/index.html',import.meta.url),'utf8');assert.match(html,/colspan="5"/);assert.match(html,/not an invoice/);assert.match(html,/failed, superseded and embedding/);assert.ok(!/Total = Training \+ Trading =/.test(html));
+});
+
+test('reservation is an optional independent estimate and never silently added to cost',()=>{
+  const rows=initial().weeks[0].tokens;rows[0].reserved_cost_usd=.5;rows[1].reserved_cost_usd=null;
+  assert.doesNotThrow(()=>validateTokens(rows));
+  for(const value of [-1,NaN,Infinity,'0.5']){const copy=structuredClone(rows);copy[0].reserved_cost_usd=value;assert.throws(()=>validateTokens(copy))}
+  const state=classifiedUsage();state.weeks[0].tokens[1].reserved_cost_usd=999;
+  const {nodes,document}=fakeDocument();createDashboard(document).render(state);
+  assert.equal(nodes.get('token-usage').children[1].children[4].textContent,'~$0.01');
+  assert.match(nodes.get('token-usage').children[1].children[4].attributes.title,/reservations are separate/);
+});
+
+test('rendering preserves weekly controls, six ranked rows and safe locally generated SVG paths',()=>{const {nodes,document}=fakeDocument();const dashboard=createDashboard(document);dashboard.render(initial());assert.equal(nodes.get('rankings').children.length,6);assert.equal(nodes.get('rankings').children[0].children[2].textContent,'Awaiting data');assert.equal(nodes.get('token-usage').children[0].children[1].textContent,'Unavailable');assert.equal(nodes.get('return-chart').children[0].tagName,'div');dashboard.render(verified());assert.equal(nodes.get('rankings').children.length,6);assert.equal(nodes.get('rankings').children[0].children[1].children[0].children[1].textContent,'Moira 2.0 · Top K = 5');const svg=nodes.get('return-chart').children[0];assert.equal(svg.tagName,'svg');assert.equal(svg.attributes.role,'img');assert.equal(svg.children.filter(node=>node.tagName==='polyline').length,6);assert.equal(nodes.get('chart-legend').children.length,6);nodes.get('performance-view').events.change({target:{value:'2026-W45'}});assert.equal(nodes.get('view-label').textContent,'2–6 November 2026');dashboard.render(verified());assert.equal(nodes.get('performance-view').value,'2026-W45');assert.match(nodes.get('usage-status').textContent,/partial coverage/);assert.equal(nodes.get('token-usage').children[1].children[1].textContent,'0');assert.equal(nodes.get('token-usage').children[1].children[2].textContent,'Unavailable');assert.equal(nodes.get('token-usage').children[1].children[3].textContent,'150');assert.equal(nodes.get('token-usage').children[1].children[4].textContent,'~$0.01');assert.equal(nodes.has('budget-status'),false);assert.match(nodes.get('next-release').textContent,/12:30/);assert.ok(!JSON.stringify(svg).includes('stock1'));assert.ok(!JSON.stringify(svg).includes('api_key'))});
 
 test('refresh only fetches the public same-origin feed without credentials and keeps last verified results on failure',async()=>{const {nodes,document}=fakeDocument();let state=verified(),fail=false;const calls=[];const dashboard=createDashboard(document,{fetcher:async(url,options)=>{calls.push([url,options]);if(fail)throw Error('unavailable');return {ok:true,json:async()=>state}}});await dashboard.refresh();const rendered=nodes.get('return-chart').children[0];assert.equal(calls[0][0],feedUrl);assert.equal(calls[0][1].credentials,'omit');assert.equal(calls[0][1].cache,'no-store');fail=true;await dashboard.refresh();assert.equal(nodes.get('return-chart').children[0],rendered);assert.match(nodes.get('feed-status').textContent,/last verified/);fail=false;state={...state,updated_at:'2026-11-02T11:00:00-05:00'};await dashboard.refresh();assert.equal(nodes.get('return-chart').children[0],rendered);assert.match(nodes.get('feed-status').textContent,/last verified/);state=initial();await dashboard.refresh();assert.equal(nodes.get('return-chart').children[0],rendered);assert.match(nodes.get('feed-status').textContent,/last verified/)});
 

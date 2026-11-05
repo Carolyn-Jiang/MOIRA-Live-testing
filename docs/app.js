@@ -10,7 +10,9 @@ const IDS=MODEL_REGISTRY.map(model=>model.id),BY_ID=new Map(MODEL_REGISTRY.map(m
 export const PERIOD=Object.freeze({start:'2026-11-02T09:30:00-05:00',last_release:'2027-05-21T15:30:00-04:00',final_settlement:'2027-05-24T10:30:00-04:00'});
 export const feedUrl=new URL('state.json',import.meta.url).href;
 const TOKEN_FIELDS=['input_tokens','cached_input_tokens','output_tokens','total_tokens','training_tokens','inference_tokens'];
-const DISPLAY_TOKEN_FIELDS=['training_tokens','inference_tokens','input_tokens','cached_input_tokens','output_tokens','total_tokens'];
+const PURPOSE_FIELDS=['trading_tokens','direction_decision_tokens','pair_reselection_tokens','relationship_monitor_tokens','loo_attribution_tokens','other_inference_tokens'];
+const DISPLAY_TOKEN_FIELDS=['training_tokens','trading_tokens','total_tokens'];
+const BREAKDOWN_FIELDS=[['input_tokens','Input'],['cached_input_tokens','Cached input'],['output_tokens','Output'],['direction_decision_tokens','Direction decisions'],['pair_reselection_tokens','15:30 pair reselections'],['relationship_monitor_tokens','Relationship monitoring'],['loo_attribution_tokens','LOO attribution'],['other_inference_tokens','Other nontraining'],['inference_tokens','All nontraining']];
 const STATUSES=['scheduled','live','pending','finished'];
 const COVERAGE=['complete','partial','unavailable'];
 const fail=message=>{throw new Error(message)};
@@ -33,10 +35,10 @@ export function validateView(view){
 }
 export function validateTokens(rows){
   if(!Array.isArray(rows))fail('Token rows required');sameModels(rows);
-  for(const row of rows){keys(row,['model_id',...TOKEN_FIELDS],['estimated_cost_usd','cost_coverage','recorded_tokens','token_coverage']);for(const field of TOKEN_FIELDS)if(row[field]!==null)count(row[field]);if(row.cached_input_tokens!==null&&row.input_tokens!==null&&row.cached_input_tokens>row.input_tokens)fail('Cached tokens exceed input');if([row.input_tokens,row.output_tokens,row.total_tokens].every(value=>value!==null)&&row.total_tokens!==row.input_tokens+row.output_tokens)fail('Token total mismatch');if([row.training_tokens,row.inference_tokens,row.total_tokens].every(value=>value!==null)&&row.total_tokens!==row.training_tokens+row.inference_tokens)fail('Token purpose total mismatch');if(Object.hasOwn(row,'estimated_cost_usd')||Object.hasOwn(row,'cost_coverage')){if(!COVERAGE.includes(row.cost_coverage)||!Object.hasOwn(row,'estimated_cost_usd'))fail('Invalid estimated cost coverage');if(row.estimated_cost_usd!==null){number(row.estimated_cost_usd);if(row.estimated_cost_usd<0||row.cost_coverage==='unavailable')fail('Invalid estimated cost')}else if(row.cost_coverage!=='unavailable')fail('Missing estimated cost')}
+  for(const row of rows){keys(row,['model_id',...TOKEN_FIELDS],[...PURPOSE_FIELDS,'estimated_cost_usd','cost_coverage','reserved_cost_usd','recorded_tokens','token_coverage']);const classified=PURPOSE_FIELDS.some(field=>Object.hasOwn(row,field));if(classified&&PURPOSE_FIELDS.some(field=>!Object.hasOwn(row,field)))fail('All trading classification fields are required together');const fields=classified?[...TOKEN_FIELDS,...PURPOSE_FIELDS]:TOKEN_FIELDS;for(const field of fields)if(row[field]!==null)count(row[field]);if(row.cached_input_tokens!==null&&row.input_tokens!==null&&row.cached_input_tokens>row.input_tokens)fail('Cached tokens exceed input');if([row.input_tokens,row.output_tokens,row.total_tokens].every(value=>value!==null)&&row.total_tokens!==row.input_tokens+row.output_tokens)fail('Token total mismatch');if([row.training_tokens,row.inference_tokens,row.total_tokens].every(value=>value!==null)&&row.total_tokens!==row.training_tokens+row.inference_tokens)fail('Token purpose total mismatch');if(classified){if(['trading_tokens','direction_decision_tokens','pair_reselection_tokens'].every(field=>row[field]!==null)&&row.trading_tokens!==row.direction_decision_tokens+row.pair_reselection_tokens)fail('Trading classification total mismatch');if(['inference_tokens','trading_tokens','relationship_monitor_tokens','loo_attribution_tokens','other_inference_tokens'].every(field=>row[field]!==null)&&row.inference_tokens!==row.trading_tokens+row.relationship_monitor_tokens+row.loo_attribution_tokens+row.other_inference_tokens)fail('Nontraining classification total mismatch')};if(Object.hasOwn(row,'reserved_cost_usd')&&row.reserved_cost_usd!==null){number(row.reserved_cost_usd);if(row.reserved_cost_usd<0)fail('Negative conservative reservation')};if(Object.hasOwn(row,'estimated_cost_usd')||Object.hasOwn(row,'cost_coverage')){if(!COVERAGE.includes(row.cost_coverage)||!Object.hasOwn(row,'estimated_cost_usd'))fail('Invalid estimated cost coverage');if(row.estimated_cost_usd!==null){number(row.estimated_cost_usd);if(row.estimated_cost_usd<0||row.cost_coverage==='unavailable')fail('Invalid estimated cost')}else if(row.cost_coverage!=='unavailable')fail('Missing estimated cost')}
     if(Object.hasOwn(row,'recorded_tokens')||Object.hasOwn(row,'token_coverage')){
-      keys(row.recorded_tokens,TOKEN_FIELDS);keys(row.token_coverage,TOKEN_FIELDS);
-      for(const field of TOKEN_FIELDS){const recorded=row.recorded_tokens[field],coverage=row.token_coverage[field];
+      keys(row.recorded_tokens,fields);keys(row.token_coverage,fields);
+      for(const field of fields){const recorded=row.recorded_tokens[field],coverage=row.token_coverage[field];
         if(recorded!==null)count(recorded);if(!COVERAGE.includes(coverage))fail('Invalid token coverage');
         if(coverage==='complete'&&(row[field]===null||recorded!==row[field]))fail('Complete token count differs from the verified total');
         if(coverage==='partial'&&(row[field]!==null||recorded===null))fail('Partial usage needs a recorded subtotal and an unknown full total');
@@ -64,13 +66,15 @@ export const rankRows=rows=>[...rows].sort((a,b)=>b.cumulative_return-a.cumulati
 export const formatReturn=value=>`${value>0?'+':''}${(value*100).toFixed(2)}%`;
 export const formatSharpe=value=>value===null?'N/A':value.toFixed(2);
 export const formatDrawdown=value=>value===0?'0%':`${(value*100).toFixed(2)}%`;
-export const formatTokens=value=>value===null?'Unavailable':value.toLocaleString('en-US');
+export const formatTokens=value=>value==null?'Unavailable':value.toLocaleString('en-US');
 export const formatTokenField=(row,field)=>row.token_coverage?.[field]==='partial'?`≥${formatTokens(row.recorded_tokens[field])}`:formatTokens(row[field]);
 export const formatEstimatedCost=(value,coverage='complete')=>value===null?'Unavailable':`~$${value.toFixed(value>0&&value<.01?4:2)}${coverage==='partial'?'*':''}`;
 export function formatNY(value){return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value))}
 
 function el(document,tag,textValue,className){const node=document.createElement(tag);if(textValue!==undefined)node.textContent=textValue;if(className)node.className=className;return node}
 function modelCell(document,id){const model=BY_ID.get(id),cell=el(document,'td'),label=el(document,'span',undefined,'model-name'),dot=el(document,'span',undefined,'model-dot');dot.style.background=model.color;dot.setAttribute('aria-hidden','true');label.append(dot,el(document,'span',model.name));cell.append(label,el(document,'small',model.backbone,'model-subtitle'));return cell}
+function tokenNode(document,row,field,tag){const partial=row.token_coverage?.[field]==='partial',value=formatTokenField(row,field),node=el(document,tag,value,'number'+(partial?' token-partial':row[field]==null?' unavailable':''));if(partial){node.setAttribute('title','Recorded subtotal; some provider usage is unavailable.');node.setAttribute('aria-label',`${value}. Recorded subtotal; some provider usage is unavailable.`)}return node}
+function usageModelCell(document,row){const cell=modelCell(document,row.model_id),details=el(document,'details'),summary=el(document,'summary'),list=el(document,'dl');summary.setAttribute('title','Expand token and cost breakdown');summary.append(...cell.children);for(const[field,label]of BREAKDOWN_FIELDS){const item=el(document,'div');item.dataset.tokenField=field;item.append(el(document,'dt',label),tokenNode(document,row,field,'dd'));list.append(item)}if(Object.hasOwn(row,'reserved_cost_usd')){const item=el(document,'div');item.append(el(document,'dt','Conservative reservation (USD)'),el(document,'dd',row.reserved_cost_usd===null?'Unavailable':`$${row.reserved_cost_usd.toFixed(4)}`,'number'));list.append(item)}details.append(summary,list);cell.replaceChildren(details);return cell}
 function svgEl(document,tag,attributes={},textValue){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value]of Object.entries(attributes))node.setAttribute(key,String(value));if(textValue!==undefined)node.textContent=textValue;return node}
 export function renderChart(document,container,legend,view){
   legend.replaceChildren();container.replaceChildren();
@@ -93,11 +97,11 @@ export function createDashboard(document,{fetcher=globalThis.fetch,now=()=>Date.
     const week=current?.weeks.find(week=>week.week_id===usageId),body=get('token-usage');body.replaceChildren();
     const rows=week?.tokens||MODEL_REGISTRY.map(model=>({model_id:model.id,...Object.fromEntries(TOKEN_FIELDS.map(field=>[field,null]))}));
     for(const model of MODEL_REGISTRY){
-      const row=rows.find(row=>row.model_id===model.id),tr=el(document,'tr');tr.append(modelCell(document,model.id));
-      for(const field of DISPLAY_TOKEN_FIELDS){const partial=row.token_coverage?.[field]==='partial',value=formatTokenField(row,field),cell=el(document,'td',value,'number'+(partial?' token-partial':row[field]===null?' unavailable':''));if(partial){cell.setAttribute('title','Recorded subtotal; some provider usage is unavailable.');cell.setAttribute('aria-label',`${value}. Recorded subtotal; some provider usage is unavailable.`)}tr.append(cell)}
+      const row=rows.find(row=>row.model_id===model.id),tr=el(document,'tr');tr.append(usageModelCell(document,row));
+      for(const field of DISPLAY_TOKEN_FIELDS)tr.append(tokenNode(document,row,field,'td'));
       const value=row.estimated_cost_usd??null,coverage=row.cost_coverage||'unavailable';
       const cost=el(document,'td',formatEstimatedCost(value,coverage),'number'+(value===null?' unavailable':''));
-      cost.setAttribute('title',coverage==='partial'?'Estimate uses available API records and conservative reservations; some usage is incomplete.':'Estimated API cost in USD for this reporting week.');
+      cost.setAttribute('title',coverage==='partial'?'Estimate uses available API records; some usage is incomplete. Conservative reservations are shown separately.':'Estimated API cost in USD for this reporting week; conservative reservations are separate.');
       tr.append(cost);body.append(tr);
     }
     const measured=rows.some(row=>TOKEN_FIELDS.some(field=>row[field]!==null||row.recorded_tokens?.[field]!=null));get('usage-status').textContent=measured?`${week.label} · ${week.tokens_coverage||'verified available counts'}${week.tokens_coverage==='partial'?' coverage':''}`:'No measured token usage has been published.';

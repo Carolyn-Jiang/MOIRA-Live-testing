@@ -64,8 +64,10 @@ class TokenSubtotalTests(unittest.TestCase):
         unknown = row(build_feed(book,asof=asof),'codex')
         verified = row(build_feed(book,asof=asof,budget_ledger=budget({})),'codex')
         self.assertTrue(all(v is None for v in unknown['recorded_tokens'].values()))
-        self.assertTrue(all(v == 0 for v in verified['recorded_tokens'].values()))
-        self.assertEqual(set(verified['token_coverage'].values()),{'complete'})
+        self.assertTrue(all(verified['recorded_tokens'][field] == 0 for field in TOKEN_FIELDS))
+        self.assertTrue(all(verified['token_coverage'][field] == 'complete' for field in TOKEN_FIELDS))
+        self.assertIsNone(verified['trading_tokens'])
+        self.assertEqual(verified['token_coverage']['trading_tokens'], 'unavailable')
 
     def test_partial_week_is_recognized_even_if_every_full_total_is_unknown(self):
         from live_testing.registry import MODEL_IDS

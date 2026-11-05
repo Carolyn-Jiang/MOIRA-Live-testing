@@ -69,7 +69,7 @@ def configuration(pair,directory,run_id):
     config['portfolio_config'].update(trading_symbols=[symbol],look_back_window_size=3)
     return config,symbol
 
-def operations_for(budget,observation):
+def operations_for(budget,observation,tickers=None):
     path=Path(budget.root)/'company-context.json';document=read_json(path)
     if document is None: raise RuntimeError('All models require a dated company-operations context')
     asof=datetime.fromisoformat(observation['timestamp'])
@@ -79,9 +79,5 @@ def operations_for(budget,observation):
     # nominal boundary but must exist before the actual inference. Its real
     # generation time remains visible in the private prompt audit.
     if generated>datetime.now(timezone.utc) or source>asof: raise RuntimeError('Future company context prohibited')
-    fields=('recent_operations_summary','company_facts','analyst_outlook','limitations','source_date_bounds',
-            'summary_evidence_uuids','source_ids')
-    return {'as_of':source.isoformat(),'generated_at':generated.isoformat(),
-            'source_basis':document.get('content_basis','partial archived news evidence'),
-            'companies':{ticker:{key:copy.deepcopy(value[key]) for key in fields if key in value}
-                         for ticker,value in document['companies'].items()}}
+    from .prompt_projection import compact_company_context
+    return compact_company_context(document,tickers=tickers)

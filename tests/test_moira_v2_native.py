@@ -87,8 +87,13 @@ class V2NativeTests(unittest.TestCase):
         self.assertEqual(action['used_memory_ids'],ids)
         self.assertEqual(call['schema']['properties']['used_memory_ids']['items']['enum'],ids)
         self.assertNotIn('past_3_days_direction_memory',call['payload'])
-        self.assertEqual(call['payload']['memory_policy']['protocol'],m.PROTOCOL_VERSION)
-        self.assertTrue(all(row['retrieval']['protocol_version']==m.PROTOCOL_VERSION for row in call['payload']['ranked_counterfactual_reflections']))
+        self.assertNotIn('memory_policy',call['payload'])
+        self.assertTrue(all(set(row)=={'unit_id','reflection'} for row in call['payload']['ranked_counterfactual_reflections']))
+        private=read_json(self.directory/'live-state.json')
+        self.assertEqual(private['memory_policy_protocol'],m.PROTOCOL_VERSION)
+        self.assertEqual(private['decisions'][self.observation()['round_id']]['provided_memory_ids'],ids)
+        self.assertEqual(set(call['payload']['company_operations_context']['companies']),
+            {action['stock1'],action['stock2']})
         self.assertTrue(all(row['request']['temperature']==0 and row['request']['store'] is False
             and row['request']['service_tier']=='default' for row in self.gateway.calls))
         count=len(self.gateway.calls);self.assertEqual(self.decide(),action);self.assertEqual(len(self.gateway.calls),count)
@@ -150,7 +155,7 @@ class V2NativeTests(unittest.TestCase):
         def client(*args):yield SimpleNamespace(responses=SimpleNamespace(create=create))
         actual=SimpleNamespace(key='synthetic-not-a-real-secret',budget=self.gateway.budget)
         llm,_=m._classes(actual,self.root/'monitor',self.model,'training')
-        llm.observation={'timestamp':self.observation(10)['timestamp'],'prices':{'NVDA':100.},'news':{'NVDA':['Ordinary source.']}}
+        llm.observation=self.observation(10)
         with patch('live_testing.llm.sdk_client',side_effect=client):
             relationship=llm.call_text(system_prompt='Return ONLY JSON with the requested native relationship fields.',
                 payload={'statistical_deterioration':['Synthetic factor.'],'pair':['NVDA','GOOG']},task_type=None)

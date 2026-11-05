@@ -9,6 +9,8 @@ from .accounting import validate_book, risk_metrics
 from .calendar import DEFAULT_CALENDAR, HALF_DAYS, NY, aware, week_bounds, month_bounds
 from .registry import MODEL_IDS
 from .budget import cost as provider_cost, model_rate, PricingUnavailable
+from .usage_classification import (FIELDS as PURPOSE_FIELDS, CATEGORIES, TRAINING_STAGES,
+                                   validate_catalog)
 
 TOKEN_FIELDS = ("input_tokens", "cached_input_tokens", "output_tokens", "total_tokens",
                 "training_tokens", "inference_tokens")
@@ -33,9 +35,9 @@ def _finite(value):
 def _call_cost(row, incoming, cached, outgoing, complete):
     """A public estimate never turns an unmeasured request into a free call.
 
-    Actual token-based fees are authoritative. A known provider/token tuple can
-    be priced with the verified rate table; missing cache counts use the
-    conservative uncached rate. Unanswered calls retain their budget bound.
+    Recorded token-based estimates take priority. A known provider/token tuple
+    can be priced with the verified rate table; missing cache counts use the
+    conservative uncached rate. Unanswered budget bounds are reported separately.
     """
     actual = row.get("actual_cost_usd")
     if actual is not None:
@@ -48,9 +50,6 @@ def _call_cost(row, incoming, cached, outgoing, complete):
             return estimate, "complete" if cached is not None or rates[0] == rates[1] else "partial"
         except PricingUnavailable:
             pass
-    guard = row.get("guard_cost_usd")
-    if guard is not None:
-        return _finite(guard), "partial"
     return None, "unavailable"
 
 
@@ -75,11 +74,14 @@ def _normalise_call(identity, row):
     if complete and row.get("total_tokens") is not None and total is not None and _count(row["total_tokens"]) != total:
         raise ValueError("Provider token totals disagree")
     estimated_cost, cost_coverage = _call_cost(row, incoming, cached, outgoing, complete)
+    reservation = (_finite(row.get("guard_cost_usd", 0))
+                   if estimated_cost is None and row.get("guard_cost_usd") is not None else 0.0)
     return {"id": row.get("source_call_id", identity), "model_id": model,
             "started_at": started, "stage": row.get("stage"),
             "input_tokens": incoming, "cached_input_tokens": cached,
             "output_tokens": outgoing, "total_tokens": total,
-            "estimated_cost_usd": estimated_cost, "cost_coverage": cost_coverage}
+            "estimated_cost_usd": estimated_cost, "cost_coverage": cost_coverage,
+            "reserved_cost_usd": reservation}
 
 
 def _calls(book, budget_ledger, imported_usage):
@@ -153,18 +155,55 @@ def _recorded_tokens(rows, *, evidence_available):
 def _cost_totals(rows, *, evidence_available):
     if not rows:
         return {"estimated_cost_usd": 0.0 if evidence_available else None,
-                "cost_coverage": "complete" if evidence_available else "unavailable"}
+                "cost_coverage": "complete" if evidence_available else "unavailable",
+                "reserved_cost_usd": 0.0 if evidence_available else None}
     known = [row["estimated_cost_usd"] for row in rows if row["estimated_cost_usd"] is not None]
     if not known:
-        return {"estimated_cost_usd": None, "cost_coverage": "unavailable"}
+        return {"estimated_cost_usd": None, "cost_coverage": "unavailable",
+                "reserved_cost_usd": math.fsum(row["reserved_cost_usd"] for row in rows)}
     return {"estimated_cost_usd": math.fsum(known),
-            "cost_coverage": "complete" if all(row["cost_coverage"] == "complete" for row in rows) else "partial"}
+            "cost_coverage": "complete" if all(row["cost_coverage"] == "complete" for row in rows) else "partial",
+            "reserved_cost_usd": math.fsum(row["reserved_cost_usd"] for row in rows)}
+
+
+def _purpose_totals(rows, *, model, catalog, start, end, evidence_available):
+    """Separate accepted trading decisions without dropping any other usage."""
+    if catalog is None:
+        return {**dict.fromkeys(PURPOSE_FIELDS),
+                "recorded": dict.fromkeys(PURPOSE_FIELDS),
+                "coverage": dict.fromkeys(PURPOSE_FIELDS, "unavailable")}
+    groups = {name: [] for name in CATEGORIES}
+    for row in rows:
+        if row["stage"] in TRAINING_STAGES:
+            continue
+        kind = catalog["calls"].get(row["id"], {}).get("kind", "other_inference")
+        groups[kind].append(row["total_tokens"])
+    groups["trading"] = groups["direction_decision"] + groups["pair_reselection"]
+    unresolved = catalog["unresolved"][model]
+    missing = {kind: any(start <= aware(stamp) < end for stamp in unresolved.get(kind, ()))
+               for kind in ("direction_decision", "pair_reselection")}
+    missing["trading"] = any(missing.values())
+    result, recorded, coverage = {}, {}, {}
+    for kind, values in groups.items():
+        field = kind + "_tokens"
+        known = [value for value in values if value is not None]
+        uncertain = missing.get(kind, False) or len(known) != len(values)
+        if not evidence_available:
+            result[field] = recorded[field] = None; coverage[field] = "unavailable"
+        elif uncertain:
+            result[field] = None
+            # A missing proof may contribute no known rows; zero remains only a lower bound.
+            recorded[field] = sum(known)
+            coverage[field] = "partial"
+        else:
+            result[field] = recorded[field] = _count(sum(known)); coverage[field] = "complete"
+    return {**result, "recorded": recorded, "coverage": coverage}
 
 
 def _coverage(rows):
     values = [row["token_coverage"][field] if "token_coverage" in row
               else "complete" if row[field] is not None else "unavailable"
-              for row in rows for field in TOKEN_FIELDS]
+              for row in rows for field in (*TOKEN_FIELDS, *(PURPOSE_FIELDS if 'trading_tokens' in row else ()))]
     return "complete" if all(value == "complete" for value in values) else "unavailable" if all(value == "unavailable" for value in values) else "partial"
 
 
@@ -229,7 +268,7 @@ def _budget(ledger, asof):
 
 
 def build_feed(book, *, calendar=DEFAULT_CALENDAR, budget_ledger=None,
-               release_manifests=(), asof, imported_usage=None) -> dict:
+               release_manifests=(), asof, imported_usage=None, usage_catalog=None) -> dict:
     """Construct a strict public whitelist; callers publish the returned JSON.
 
     Performance weeks use actual exit boundaries. Usage weeks use actual request
@@ -256,6 +295,8 @@ def build_feed(book, *, calendar=DEFAULT_CALENDAR, budget_ledger=None,
             raise ValueError("Models do not share one completed release prefix")
     all_time = _view(histories, range(common))
     calls = [row for row in _calls(book, budget_ledger, imported_usage) if row["started_at"] <= asof]
+    if usage_catalog is not None:
+        validate_catalog(usage_catalog, book, _calls(book, budget_ledger, imported_usage), ledger=budget_ledger)
     grouped = defaultdict(list)
     for i in range(common):
         local = aware(histories[MODEL_IDS[0]][i]["exit_at"])
@@ -271,10 +312,16 @@ def build_feed(book, *, calendar=DEFAULT_CALENDAR, budget_ledger=None,
         tokens = []
         for model in MODEL_IDS:
             model_calls = [row for row in scoped if row["model_id"] == model]
-            tokens.append({"model_id": model, **_token_totals(model_calls,
+            row = {"model_id": model, **_token_totals(model_calls,
                 evidence_available=budget_ledger is not None), **_recorded_tokens(model_calls,
                 evidence_available=budget_ledger is not None), **_cost_totals(model_calls,
-                evidence_available=budget_ledger is not None)})
+                evidence_available=budget_ledger is not None)}
+            purpose = _purpose_totals(model_calls, model=model, catalog=usage_catalog, start=start, end=end,
+                                      evidence_available=budget_ledger is not None)
+            row.update({field: purpose[field] for field in PURPOSE_FIELDS})
+            row["recorded_tokens"].update(purpose["recorded"])
+            row["token_coverage"].update(purpose["coverage"])
+            tokens.append(row)
         shared = _token_totals([row for row in scoped if row["model_id"] in SHARED_IDS],
                                evidence_available=budget_ledger is not None)
         weeks.append({"week_id": f"{key[0]:04d}-W{key[1]:02d}",

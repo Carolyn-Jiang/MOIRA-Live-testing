@@ -98,3 +98,19 @@ footer,footer a{font-size:14px;line-height:1.6}
 }
 
 .usage-table th:first-child,.usage-table td:first-child{min-width:220px}
+
+/* Keep the five-column usage table readable; details carry the full accounting. */
+.usage-table{min-width:900px}
+.usage-table td:first-child{min-width:280px}
+.usage-table details{max-width:440px}
+.usage-table summary{display:grid;grid-template-columns:14px minmax(0,1fr);column-gap:8px;cursor:pointer;list-style:none}
+.usage-table summary::-webkit-details-marker{display:none}
+.usage-table summary::before{content:'›';grid-column:1;grid-row:1/3;font-size:21px;line-height:1.1;color:var(--green)}
+.usage-table details[open]>summary::before{transform:rotate(90deg);align-self:start}
+.usage-table summary>.model-name,.usage-table summary>.model-subtitle{grid-column:2}
+.usage-table summary:focus-visible{outline:3px solid var(--gold);outline-offset:5px;border-radius:3px}
+.usage-table dl{margin:18px 0 0 22px;font-size:15px;font-weight:400}
+.usage-table dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:6px 0}
+.usage-table dt{color:var(--muted)}
+.usage-table dd{margin:0;white-space:nowrap}
+.usage-table td{vertical-align:top}

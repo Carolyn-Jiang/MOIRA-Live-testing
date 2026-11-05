@@ -6,6 +6,7 @@ import unittest
 
 from live_testing.finmem_native import constrained_live_call
 from live_testing.storage import write_private
+from live_testing.registry import TICKERS
 
 
 class PrivateAdapterTests(unittest.TestCase):
@@ -16,9 +17,15 @@ class PrivateAdapterTests(unittest.TestCase):
         self.config={'finmem_action_adapter':{'path':str(self.path),
             'sha256':hashlib.sha256(self.path.read_bytes()).hexdigest()}}
         write_private(self.root/'config.json',self.config)
+        self.pair=list(TICKERS[:2])
+        self.observation={'timestamp':'2026-11-02T09:30:00-05:00',
+            'prices':{t:100. for t in TICKERS},'news':{t:[] for t in TICKERS}}
+        write_private(self.root/'company-context.json',{'generated_at':'2026-11-01T12:00:00-05:00',
+            'as_of':'2026-11-01T11:00:00-05:00',
+            'companies':{t:{'recent_operations_summary':'Synthetic known prior operations.'} for t in TICKERS}})
     def tearDown(self):self.temp.cleanup()
     def call(self,endpoint):
-        return constrained_live_call(endpoint,'source',{},state={},observation={},
+        return constrained_live_call(endpoint,'source',{},state={'selected_pair':self.pair},observation=self.observation,
             failure_type=RuntimeError,directory=self.root,holder={'budget':SimpleNamespace(root=self.root)})
     def test_actual_endpoint_is_called_only_through_verified_external_adapter(self):
         calls=[]
