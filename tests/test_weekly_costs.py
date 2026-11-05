@@ -13,6 +13,31 @@ def model_row(feed, model, week=0):
 
 
 class WeeklyCostTests(unittest.TestCase):
+    def test_sol_cache_write_pricing_uses_raw_provider_partitions(self):
+        book,asof=populated()
+        row=call('codex',requested_model='gpt-6.1-sol',actual_cost_usd=None,
+                 input_tokens=1000,cached_input_tokens=200,output_tokens=100,total_tokens=1100,
+                 usage={'input_tokens':1000,'output_tokens':100,
+                        'input_tokens_details':{'cached_tokens':200,'cache_write_tokens':500}},
+                 cache_write_ttl='30m',guard_cost_usd=.02)
+        actual=model_row(build_feed(book,asof=asof,budget_ledger=budget({'sol':row})),'codex')
+        self.assertAlmostEqual(actual['estimated_cost_usd'],.00287)
+        self.assertEqual(actual['cost_coverage'],'complete')
+        self.assertEqual(actual['total_tokens'],1100)
+        self.assertEqual(actual['reserved_cost_usd'],0)
+
+    def test_sol_unknown_write_cost_keeps_known_tokens_and_separate_reservation(self):
+        book,asof=populated()
+        row=call('codex',requested_model='gpt-6.1-sol',actual_cost_usd=None,
+                 input_tokens=1000,cached_input_tokens=200,output_tokens=100,total_tokens=1100,
+                 usage={'input_tokens':1000,'output_tokens':100,
+                        'input_tokens_details':{'cached_tokens':200}},guard_cost_usd=.02)
+        actual=model_row(build_feed(book,asof=asof,budget_ledger=budget({'sol':row})),'codex')
+        self.assertIsNone(actual['estimated_cost_usd'])
+        self.assertEqual(actual['cost_coverage'],'unavailable')
+        self.assertEqual(actual['total_tokens'],1100)
+        self.assertEqual(actual['reserved_cost_usd'],.02)
+
     def test_per_model_cost_includes_training_inference_embeddings_but_not_shared_news(self):
         book,asof=populated()
         ledger=budget({'train':call('moira2-top1','training',actual_cost_usd=.2,guard_cost_usd=.2),

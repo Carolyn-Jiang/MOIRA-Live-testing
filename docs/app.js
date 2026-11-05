@@ -1,5 +1,5 @@
 export const MODEL_REGISTRY=Object.freeze([
-  {id:'codex',name:'Codex',backbone:'gpt-5.3-codex',color:'#176c54'},
+  {id:'codex',name:'Codex',backbone:'gpt-6.1-sol',color:'#176c54'},
   {id:'finmem',name:'FinMem',backbone:'gpt-4.1-mini',color:'#a3772e'},
   {id:'moira',name:'Moira',backbone:'gpt-4.1-mini',color:'#527c9c'},
   {id:'moira2-top1',name:'Moira 2.0 · Top K = 1',backbone:'gpt-4.1-mini',color:'#7e619b'},

@@ -10,12 +10,14 @@ Model IDs, in stable tie-breaking order:
 
 | ID | Display name | Backbone |
 | --- | --- | --- |
-| `codex` | Codex | gpt-5.3-codex |
+| `codex` | Codex | gpt-6.1-sol |
 | `finmem` | FinMem | gpt-4.1-mini |
 | `moira` | Moira | gpt-4.1-mini |
 | `moira2-top1` | Moira 2.0 · Top K = 1 | gpt-4.1-mini |
 | `moira2-top3` | Moira 2.0 · Top K = 3 | gpt-4.1-mini |
 | `moira2-top5` | Moira 2.0 · Top K = 5 | gpt-4.1-mini |
+
+Codex is the reference baseline name, with `gpt-6.1-sol` as its current backbone. Its stable `codex` ID does not relabel earlier requests. The authorized replacement of 18 historical decisions uses an isolated replay of the same frozen observations and execution prices; the new aggregate is published only after validation. Regenerated decisions retain their actual new generation times and retrospective provenance privately. Original `gpt-5.3-codex` requests, audit records, measured usage and cost estimates remain included in accounting. The label does not imply that the regenerated actions existed at their original release times or establish any performance or billing result.
 
 `all_time` contains exactly `completed_rounds`, `rows`, `series`. `weeks` is an array of objects with `week_id` (such as `2026-W45`), `label`, timezone-aware `start` and `end`, the same three view fields, and `tokens`. Optional `tokens_coverage` is `complete`, `partial` or `unavailable`. Weekly completed counts must sum to the all-time count.
 

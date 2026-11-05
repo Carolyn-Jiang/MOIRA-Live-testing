@@ -11,7 +11,7 @@ import pandas as pd
 
 from live_testing.accounting import new_book
 from live_testing.calendar import DEFAULT_CALENDAR as C
-from live_testing.registry import MODEL_IDS,TICKERS,BACKBONES
+from live_testing.registry import MODEL_IDS,TICKERS,LEGACY_BACKBONES as BACKBONES
 from live_testing.migration import import_legacy_actions,_Source
 from live_testing.projection import build_feed
 

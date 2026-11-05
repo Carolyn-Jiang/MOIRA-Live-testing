@@ -8,7 +8,7 @@ import math
 from .accounting import validate_book, risk_metrics
 from .calendar import DEFAULT_CALENDAR, HALF_DAYS, NY, aware, week_bounds, month_bounds
 from .registry import MODEL_IDS
-from .budget import cost as provider_cost, model_rate, PricingUnavailable
+from .budget import cost as provider_cost, model_rate, usage_cost, PricingUnavailable
 from .usage_classification import (FIELDS as PURPOSE_FIELDS, CATEGORIES, TRAINING_STAGES,
                                    validate_catalog)
 
@@ -43,6 +43,14 @@ def _call_cost(row, incoming, cached, outgoing, complete):
     if actual is not None:
         return _finite(actual), "complete"
     provider = row.get("requested_model") or row.get("response_model") or row.get("provider_model")
+    if complete and provider and (provider == 'gpt-6.1-sol' or provider.startswith('gpt-6.1-sol-20')):
+        # Cache writes replace ordinary input and have distinct lifetime rates.
+        # Missing write evidence must not become an invented zero-write bill.
+        try:
+            return usage_cost(provider, row.get('usage') or {},
+                              cache_write_ttl=row.get('cache_write_ttl')), 'complete'
+        except (ValueError, PricingUnavailable):
+            return None, 'unavailable'
     if complete and incoming is not None and outgoing is not None and provider:
         try:
             rates = model_rate(provider)

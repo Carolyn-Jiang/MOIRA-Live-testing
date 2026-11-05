@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from .calendar import aware
-from .registry import MODEL_IDS
+from .registry import LEGACY_BACKBONES, MODEL_IDS
 from .storage import digest, file_hash, read_json
 
 SCHEMA = 'moira.usage-classification/1'
@@ -92,6 +92,36 @@ def _observation_at(audit):
 def _within(row, start, end):
     try:
         return aware(start) <= aware(row['started_at']) <= aware(end)
+    except (ValueError, TypeError, KeyError):
+        return False
+
+
+def _accepted_legacy_action(identity, row, model, stamp, decision):
+    """Bind unknown legacy usage to the still-accepted original seal only.
+
+    A replacement decision can share its release boundary with an old import,
+    but that does not make the old, unmeasured request its trading receipt.
+    """
+    audit = decision.get('audit') or {}
+    seal = audit.get('source_original_seal') if isinstance(audit, dict) else None
+    if not isinstance(seal, dict) or not isinstance(seal.get('action'), dict):
+        return False
+    try:
+        rid = aware(stamp).strftime('%Y-%m-%d_%H:%M')
+        seal_sha256 = digest(seal)
+        return (decision.get('mode') == 'live'
+                and audit.get('input_protocol') == 'legacy_input_summary_protocol'
+                and audit.get('source_round_id') == rid
+                and audit.get('source_seal_sha256') == seal_sha256
+                and seal.get('model') == LEGACY_BACKBONES[model]
+                and _action(seal['action']) == _action(decision['action'])
+                and aware(seal['sealed_at']) == aware(decision['generated_at'])
+                and identity == f'legacy-action:{model}:{rid}:{seal_sha256}'
+                and row.get('model_id') == model
+                and row.get('stage') == 'inference'
+                and row.get('source_protocol') == 'legacy_input_summary_protocol'
+                and row.get('source_round_id') == rid
+                and aware(row['started_at']) == aware(seal['sealed_at']))
     except (ValueError, TypeError, KeyError):
         return False
 
@@ -315,9 +345,10 @@ def build_catalog_from_state(root, book, ledger):
                             and audit.get('generated_at') and 0 <= (aware(decision['generated_at'])-aware(audit['generated_at'])).total_seconds() < 5):
                         found.extend(identity for identity, row in raw.items() if row.get('model_id') == model
                             and row.get('response_id') == audit.get('response_id') and row.get('response_id'))
-                # An accepted legacy action receipt can truthfully have unknown usage.
-                found.extend(identity for identity, row in raw.items() if row.get('model_id') == model
-                    and identity.startswith('legacy-action:') and row.get('source_round_id') == aware(stamp).strftime('%Y-%m-%d_%H:%M'))
+                # Unknown legacy usage belongs to Trading only while that exact
+                # original seal remains accepted; replaced imports stay in Total.
+                found.extend(identity for identity, row in raw.items()
+                    if _accepted_legacy_action(identity, row, model, stamp, decision))
             found = sorted(set(found))
             if len(found) == 1:
                 claim(found[0], model, 'direction_decision', stamp)

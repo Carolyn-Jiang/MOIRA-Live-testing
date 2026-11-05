@@ -14,12 +14,14 @@ The initial public feed deliberately contains no performance observations. “Pe
 
 | Model ID | Backbone | Decision-memory mechanism |
 | --- | --- | --- |
-| `codex` | `gpt-5.3-codex` | Released observation and dated company context |
+| `codex` | `gpt-6.1-sol` | Released observation and dated company context |
 | `finmem` | `gpt-4.1-mini` | Native fixed-pair FinMem agent and layered memory |
 | `moira` | `gpt-4.1-mini` | Native Moira policy components and chronological recent memory |
 | `moira2-top1` | `gpt-4.1-mini` | Independent whole-reflection retrieval, top K = 1 |
 | `moira2-top3` | `gpt-4.1-mini` | Independent whole-reflection retrieval, top K = 3 |
 | `moira2-top5` | `gpt-4.1-mini` | Independent whole-reflection retrieval, top K = 5 |
+
+**Codex** is the reference baseline name; its current backbone is `gpt-6.1-sol`. The model ID `codex` remains stable for aggregate comparisons and accounting.
 
 The ten eligible tickers are NVDA, GOOG, META, MSFT, JPM, AMZN, AAPL, AMD, WMT and TSLA. Two distinct stocks and an explicit LS, SL or F action are required internally. Missing decisions, missing quotes and failed requests remain pending; they are never silently replaced with Flat.
 
@@ -89,6 +91,8 @@ This command can make paid model calls and publish authorized data/results. Impo
 The first two explicitly authorized observations on 2 November may use retrospective point-in-time replay. Imported actions retain their genuine generation times, and every imported Moira pair transition must satisfy this experiment's lifecycle schedule: a BREAK remains pending until an actual 15:30 New York data release. An incompatible legacy transition is rejected before bootstrap copies or commits its state. The user's additional authorization covers only 2 November training-preparation gaps up to the recorded training-completion cutoff, and only where the observation was already frozen and published. It does not authorize arbitrary historical replay, future observations or recrawling a past window to replace its inputs. Moira 2.0 actions are generated after version-specific training from those corresponding frozen observations, with their **real generation times, explicit authorization and retrospective mode** retained privately. They must not be presented as contemporaneously generated live decisions or as out-of-sample results.
 
 An explicitly authorized correction of an incompatible imported Moira transition runs in a separate shadow state. It preserves the valid decision prefix, archives the superseded records, reuses the exact published observations and immutable valuations, and exposes feedback only after its original exit boundary. Corrected decisions retain their actual new generation times and retrospective provenance. The corrected account and native state are installed only after validation; other models and the separate Task 2 competition remain unchanged. Ordinary dispatch does not grant or perform this repair automatically.
+
+The authorized Codex backbone migration regenerates the 18 previously accepted decisions with `gpt-6.1-sol` in an isolated shadow account, using the same frozen published observations and delayed execution prices. Every regenerated decision retains its actual new generation time and explicit retrospective provenance; it was generated during the migration, after its historical observation. The replacement aggregate is installed only after validation. Original `gpt-5.3-codex` requests, superseded audit records and their measured usage and cost estimates remain in the accounting history. The other five models and the separate Task 2 competition are preserved. This authorization does not establish inference success, trading results or a billing allowance.
 
 The original Moira's inherited CR-trained checkpoint requires a separate, staged Sharpe retraining before this correction. `live_testing.retrain_original_sharpe` starts from the retained default prompt with empty learned beliefs and pair memory, uses only the same frozen historical 29-release dataset and its delayed execution labels, and accepts strict sample-Sharpe improvements for at most eight cycles. It never installs a model or rewrites live results itself. Replacing a checkpoint requires regenerating the entire affected model's decision sequence, rather than retaining decisions made with the previous checkpoint. Training metrics are in-sample and never enter the live account.
 

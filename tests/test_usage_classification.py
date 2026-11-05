@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from live_testing.projection import _calls, build_feed
-from live_testing.registry import MODEL_IDS
+from live_testing.registry import LEGACY_BACKBONES, MODEL_IDS
 from live_testing.storage import digest
 from live_testing.usage_classification import (build_usage_catalog, build_catalog_from_state,
                                              FIELDS, validate_catalog)
@@ -13,6 +13,20 @@ from tests.test_projection import populated, budget, call
 
 
 class UsageClassificationTests(unittest.TestCase):
+    def legacy_codex_usage(self, stamp, decision):
+        rid = stamp[:10]+'_'+stamp[11:16]
+        seal = {'action': copy.deepcopy(decision['action']),
+                'sealed_at': decision['generated_at'], 'model': LEGACY_BACKBONES['codex']}
+        identity = f'legacy-action:codex:{rid}:{digest(seal)}'
+        audit = {'input_protocol': 'legacy_input_summary_protocol', 'source_round_id': rid,
+                 'source_seal_sha256': digest(seal), 'source_original_seal': seal}
+        row = {'source_call_id': identity, 'model_id': 'codex', 'stage': 'inference',
+               'started_at': seal['sealed_at'], 'status': 'usage-unavailable',
+               'input_tokens': None, 'cached_input_tokens': None, 'output_tokens': None,
+               'total_tokens': None, 'source_protocol': 'legacy_input_summary_protocol',
+               'source_round_id': rid}
+        return identity, audit, row
+
     def fixture(self):
         book, at = populated(1)
         stamp = next(iter(book['decisions']['moira']))
@@ -164,6 +178,75 @@ class UsageClassificationTests(unittest.TestCase):
             missing = build_catalog_from_state(root, book, ledger)
             self.assertNotIn('receipt-0', missing['calls'])
             self.assertEqual(missing['unresolved']['finmem']['direction_decision'], ['2026-11-02T09:30:00-05:00'])
+
+    def test_reissued_codex_first_two_use_new_receipts_without_losing_old_usage(self):
+        book, at = populated(2)
+        ledger = budget({}); audits = []; book['imported_usage'] = []
+        old_ids = set(); new_ids = set()
+        for i, (stamp, decision) in enumerate(book['decisions']['codex'].items()):
+            identity, _, row = self.legacy_codex_usage(stamp, decision)
+            old_ids.add(identity); book['imported_usage'].append(row)
+            # This is a new accepted retrospective generation, not the original
+            # imported seal, even when the selected pair/action happen to match.
+            decision['mode'] = 'retrospective_point_in_time'
+            decision['audit'] = {'authorization': 'Explicit model migration', 'input_sha256': 'a'*64}
+            receipt = f'new-receipt-{i}'; new_ids.add(receipt)
+            ledger['calls'][receipt] = call('codex', 'replay', started_at=decision['generated_at'],
+                requested_model='gpt-6.1-sol', response_id=f'provider-{i}')
+            audits.append({'model_id': 'codex', 'payload': {'observation': {'timestamp': stamp}},
+                'response': copy.deepcopy(decision['action']), 'generated_at': decision['generated_at'],
+                'response_id': f'provider-{i}'})
+        original = copy.deepcopy((book, ledger))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); (root/'api-audit').mkdir()
+            (root/'api-audit/model-calls.jsonl').write_text(''.join(json.dumps(x)+'\n' for x in audits))
+            catalog = build_catalog_from_state(root, book, ledger)
+        self.assertEqual(set(catalog['calls']), new_ids)
+        self.assertFalse(catalog['unresolved']['codex']['direction_decision'])
+        self.assertEqual({x['id'] for x in _calls(book, ledger, None)}, old_ids | new_ids)
+        row = next(x for x in build_feed(book, asof=at, budget_ledger=ledger,
+                   usage_catalog=catalog)['weeks'][0]['tokens'] if x['model_id'] == 'codex')
+        self.assertEqual(row['trading_tokens'], 260)
+        self.assertEqual(row['token_coverage']['trading_tokens'], 'complete')
+        self.assertIsNone(row['total_tokens'])
+        self.assertEqual(row['recorded_tokens']['total_tokens'], 260)
+        self.assertEqual(row['token_coverage']['total_tokens'], 'partial')
+        self.assertIsNone(row['other_inference_tokens'])
+        self.assertEqual(row['token_coverage']['other_inference_tokens'], 'partial')
+        self.assertEqual((book, ledger), original)
+
+    def test_original_codex_import_keeps_unknown_trading_usage_partial(self):
+        book, at = populated(1)
+        stamp, decision = next(iter(book['decisions']['codex'].items()))
+        identity, audit, row = self.legacy_codex_usage(stamp, decision)
+        decision['audit'] = audit; book['imported_usage'] = [row]
+        ledger = budget({})
+        with tempfile.TemporaryDirectory() as temporary:
+            catalog = build_catalog_from_state(Path(temporary), book, ledger)
+        self.assertEqual(catalog['calls'][identity]['kind'], 'direction_decision')
+        self.assertFalse(catalog['unresolved']['codex']['direction_decision'])
+        tokens = next(x for x in build_feed(book, asof=at, budget_ledger=ledger,
+                      usage_catalog=catalog)['weeks'][0]['tokens'] if x['model_id'] == 'codex')
+        self.assertIsNone(tokens['trading_tokens'])
+        self.assertEqual(tokens['token_coverage']['trading_tokens'], 'partial')
+        self.assertEqual(tokens['recorded_tokens']['trading_tokens'], 0)
+        self.assertEqual(tokens['other_inference_tokens'], 0)
+        # Broken provenance cannot turn an unrelated old import into a receipt.
+        for field in ('source_round_id', 'source_seal_sha256', 'generation', 'row_generation', 'action'):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                altered = copy.deepcopy(book)
+                proof = altered['decisions']['codex'][stamp]['audit']
+                if field in ('source_round_id', 'source_seal_sha256'):
+                    proof[field] = 'mismatch'
+                elif field == 'generation':
+                    altered['decisions']['codex'][stamp]['generated_at'] = '2026-11-02T09:31:00-05:00'
+                elif field == 'row_generation':
+                    altered['imported_usage'][0]['started_at'] = '2026-11-02T09:31:00-05:00'
+                else:
+                    altered['decisions']['codex'][stamp]['action']['action'] = 'F'
+                rejected = build_catalog_from_state(Path(temporary), altered, ledger)
+                self.assertNotIn(identity, rejected['calls'])
+                self.assertEqual(rejected['unresolved']['codex']['direction_decision'], [stamp])
 
     def test_pure_catalog_automatically_marks_unproved_accepted_decisions(self):
         book, _, ledger, _ = self.fixture()

@@ -15,7 +15,7 @@ from urllib.parse import unquote, urlsplit
 
 from .accounting import record_decision, record_valuation, validate_book
 from .calendar import DEFAULT_CALENDAR, aware
-from .registry import BACKBONES, TICKERS
+from .registry import LEGACY_BACKBONES, TICKERS
 
 ORIGINAL_MODELS = {"codex": "Codex", "finmem": "FinMem", "moira": "Moira"}
 
@@ -193,7 +193,7 @@ def import_legacy_actions(book, legacy_phase3_directory, calendar=DEFAULT_CALEND
         for model_id, old_name in ORIGINAL_MODELS.items():
             seal = state["sealed"][rid][old_name]
             generated = aware(seal["sealed_at"])
-            if seal.get("model") != BACKBONES[model_id] or not published_at <= generated < calendar.action_window(at).entry_at:
+            if seal.get("model") != LEGACY_BACKBONES[model_id] or not published_at <= generated < calendar.action_window(at).entry_at:
                 raise ValueError("Copied baseline must retain a genuine timely original response")
             record_decision(candidate, model_id, at, seal["action"], generated_at=generated, input_asof=at,
                 mode="live", audit={**proof, "source_seal_sha256": _digest(seal),
