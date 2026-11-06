@@ -323,16 +323,19 @@ def _reselection(runtime,event,directory):
     from .data import observation
     root=Path(runtime.root); rows=_visible_releases(runtime,aware(event.at))
     if not rows:return {"status":"pending","reason":"no_published_observation"}
-    runtime.feedback(event.at)
+    feedback_errors=runtime.feedback(event.at) or {}
+    if feedback_errors.get("finmem"):return {"status":"pending","reason":"finmem_feedback_incomplete"}
     source=root/"models/finmem";pointer=read_json(source/"active-epoch.json");old=Path(pointer["directory"])
     selection_path=directory/"selection.json";saved=read_json(selection_path)
-    week_start,_=week_bounds(event.at)
-    feedback=[row for row in matured_feedback(runtime.book,"finmem",_clock(),observation_asof=event.at)
-              if week_start<=aware(row["exit_at"])<=aware(event.at)]
+    from .finmem_weekly_context import build_context
     data=rows[-1][2];obs=observation(data)
-    obs["weekly_return"]={**risk_metrics(row["step_return"] for row in feedback),"known_labels":len(feedback),
-                          "scope":"only already-finalized current-week exits; pending actions excluded"}
-    obs["finalized_memory"]=[{k:copy.deepcopy(row[k]) for k in ("release_at","exit_at","step_return","action")} for row in feedback]
+    weekly,proof=build_context(root,runtime.book,event.at,obs["timestamp"])
+    obs["weekly_reselection_context"]=weekly
+    write_private(directory/"weekly-context.json",weekly)
+    write_private(directory/"weekly-context-proof.json",proof)
+    feedback=weekly["finalized_memory"]
+    if saved is not None and saved.get("weekly_context_sha256")!=digest(weekly):
+        raise RuntimeError("Saved weekly selection lacks its complete context; explicit audited repair required")
     gateway=runtime.gateway.scoped("finmem","inference",event.id)
     if saved is None:
         write_private(selection_path,{"status":"in_progress","observation_sha256":digest(obs),"started_at":now()})
@@ -348,7 +351,7 @@ def _reselection(runtime,event,directory):
                 pair,meta=finmem_native.select_pair(read_json(root/"seed/finmem-bundle.json"),obs,gateway.key,gateway.budget)
         finally:
             for client in clients:client.close()
-        saved={"status":"complete","pair":pair,"metadata":meta,"observation_sha256":digest(obs),"generated_at":now()}
+        saved={"status":"complete","pair":pair,"metadata":meta,"observation_sha256":digest(obs),"weekly_context_sha256":digest(weekly),"generated_at":now()}
         write_private(selection_path,saved)
     elif saved.get("status")!="complete":raise RuntimeError("Ambiguous previous pair selection; no duplicate paid calls")
     epoch=source/"epochs"/aware(event.at).strftime("%Y-%m-%d_%H-%M_NY")

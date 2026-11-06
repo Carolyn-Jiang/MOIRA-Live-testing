@@ -226,7 +226,7 @@ class MaintenanceTests(unittest.TestCase):
             result=m.run_maintenance(self.runtime,e)
         self.assertEqual(result['status'],'completed');self.assertEqual(self.runtime.book,before)
         self.assertEqual((old/'live-state.json').read_bytes(),old_bytes);collect.assert_not_called();clone.assert_called_once()
-        obs=choose.call_args.args[1];self.assertEqual(obs['timestamp'],when('2026-11-27',12,30).isoformat());self.assertIn('weekly_return',obs);self.assertIn('finalized_memory',obs)
+        obs=choose.call_args.args[1];self.assertEqual(obs['timestamp'],when('2026-11-27',12,30).isoformat());self.assertIn('weekly_reselection_context',obs);self.assertEqual(obs['weekly_reselection_context']['known_labels'],0)
         new=Path(read_json(self.root/'models/finmem/active-epoch.json')['directory']);self.assertNotEqual(new,old)
         self.assertEqual(read_json(new/'live-state.json')['decisions'],{});self.assertFalse(result['warmup_retrained'])
 
