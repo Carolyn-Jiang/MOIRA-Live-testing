@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "live",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-09T13:45:04.979806-05:00",
+  "updated_at": "2026-11-09T13:57:07.919853-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -2277,25 +2277,25 @@
         },
         {
           "model_id": "moira2-top1",
-          "input_tokens": 2151393,
+          "input_tokens": 2174380,
           "cached_input_tokens": 5760,
-          "output_tokens": 95775,
-          "total_tokens": 2247168,
+          "output_tokens": 96671,
+          "total_tokens": 2271051,
           "training_tokens": 2204302,
-          "inference_tokens": 42866,
+          "inference_tokens": 66749,
           "recorded_tokens": {
-            "input_tokens": 2151393,
+            "input_tokens": 2174380,
             "cached_input_tokens": 5760,
-            "output_tokens": 95775,
-            "total_tokens": 2247168,
+            "output_tokens": 96671,
+            "total_tokens": 2271051,
             "training_tokens": 2204302,
-            "inference_tokens": 42866,
-            "direction_decision_tokens": 9926,
+            "inference_tokens": 66749,
+            "direction_decision_tokens": 16681,
             "pair_reselection_tokens": 0,
-            "relationship_monitor_tokens": 6533,
-            "loo_attribution_tokens": 2779,
-            "other_inference_tokens": 23628,
-            "trading_tokens": 9926
+            "relationship_monitor_tokens": 12181,
+            "loo_attribution_tokens": 11448,
+            "other_inference_tokens": 26439,
+            "trading_tokens": 16681
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -2311,15 +2311,15 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 0.85644687,
+          "estimated_cost_usd": 0.8663163,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 9926,
-          "direction_decision_tokens": 9926,
+          "trading_tokens": 16681,
+          "direction_decision_tokens": 16681,
           "pair_reselection_tokens": 0,
-          "relationship_monitor_tokens": 6533,
-          "loo_attribution_tokens": 2779,
-          "other_inference_tokens": 23628
+          "relationship_monitor_tokens": 12181,
+          "loo_attribution_tokens": 11448,
+          "other_inference_tokens": 26439
         },
         {
           "model_id": "moira2-top3",
@@ -2434,7 +2434,7 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 29.2834015,
+    "spent_usd": 29.29327093,
     "reserved_usd": 0.17641449999999992,
     "warning_usd": 20,
     "limit_usd": 100,
