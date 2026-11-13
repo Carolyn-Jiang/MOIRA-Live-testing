@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-13T09:33:45.613676-05:00",
+  "updated_at": "2026-11-13T09:50:32.846864-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -3424,12 +3424,12 @@
       ],
       "tokens_coverage": "complete",
       "shared_tokens": {
-        "input_tokens": 1211646,
+        "input_tokens": 1211990,
         "cached_input_tokens": 0,
-        "output_tokens": 141848,
-        "total_tokens": 1353494,
+        "output_tokens": 141909,
+        "total_tokens": 1353899,
         "training_tokens": 0,
-        "inference_tokens": 1353494
+        "inference_tokens": 1353899
       },
       "shared_tokens_coverage": "complete"
     }
@@ -3442,7 +3442,7 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 30.92222316,
+    "spent_usd": 30.92245836,
     "reserved_usd": 0.17641449999999992,
     "warning_usd": 20,
     "limit_usd": 100,
