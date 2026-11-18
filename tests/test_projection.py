@@ -8,7 +8,7 @@ import unittest
 
 from live_testing.accounting import new_book,record_decision,record_valuation,settle_due
 from live_testing.calendar import DEFAULT_CALENDAR as C,NY
-from live_testing.projection import build_feed,TOKEN_FIELDS
+from live_testing.projection import build_feed,TOKEN_FIELDS,_view
 from live_testing.registry import MODEL_IDS
 
 
@@ -38,6 +38,17 @@ def populated(count=2,missing_second=False):
 
 
 class ProjectionTests(unittest.TestCase):
+    def test_ranking_uses_sharpe_with_negative_values_before_undefined_and_stable_ties(self):
+        returns = [[.2,-.1],[.01,.011],[0.,0.],[-.01,-.02],[0.,.01],[0.,.01]]
+        histories = {model:[{"step_return":value} for value in values]
+            for model,values in zip(MODEL_IDS,returns)}
+        original = copy.deepcopy(histories)
+        view = _view(histories,range(2))
+        self.assertEqual([row["model_id"] for row in view["rows"]],
+            ["finmem","moira2-top3","moira2-top5","codex","moira2-top1","moira"])
+        self.assertEqual([row["model_id"] for row in _view(histories,[0])["rows"]],list(MODEL_IDS))
+        self.assertEqual(histories,original)
+
     def test_only_six_model_common_settled_prefix_is_public(self):
         book,asof=populated(missing_second=True)
         self.assertEqual([len(book["accounts"][m]["history"]) for m in MODEL_IDS],[2,2,2,2,2,1])

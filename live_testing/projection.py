@@ -230,7 +230,9 @@ def _view(histories, indices):
             equity *= 1 + value
             points.append({"step": step, "equity": equity})
         series.append({"model_id": model, "points": points})
-    rows.sort(key=lambda row: (-row["cumulative_return"], MODEL_IDS.index(row["model_id"])))
+    rows.sort(key=lambda row: (row["sharpe_ratio"] is None,
+        -row["sharpe_ratio"] if row["sharpe_ratio"] is not None else 0,
+        MODEL_IDS.index(row["model_id"])))
     return {"completed_rounds": len(indices), "rows": rows, "series": series}
 
 

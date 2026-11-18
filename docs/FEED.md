@@ -23,6 +23,8 @@ Codex is the reference baseline name, with `gpt-6.1-sol` as its current backbone
 
 Each metric row contains only `{model_id, cumulative_return, sharpe_ratio, max_drawdown}`. Returns and drawdowns are decimals. Sharpe is nonannualized, uses zero risk-free rate and sample standard deviation; undefined Sharpe is `null`. Drawdown is nonnegative and includes initial equity 1.
 
+All-time and weekly ranking rows use descending full-precision Sharpe. Undefined Sharpe (`null`, displayed as N/A) follows every defined value, including negative values. Exact ties use the registered model order above.
+
 Each series contains only `{model_id, points}`; each point is exactly `{step, equity}`. Step 0 is equity 1, followed by every consecutive completed settlement. Weekly series are independently rebased to 1. Counts above zero require all six distinct models, the same number of settlement points and metrics consistent with those paths. Counts of zero require empty `rows` and `series`; pending models are never inferred to be flat.
 
 Each week's six token rows require `model_id`, `input_tokens`, `cached_input_tokens`, `output_tokens`, `total_tokens`, `training_tokens`, `inference_tokens`. Counts are nonnegative safe integers or `null` when unavailable. Input includes cached input; total is input plus output. Training plus inference equals total when all three are known. `inference_tokens` retains its compatibility meaning of all nontraining usage. Imported usage with no source measurements stays unavailable, rather than becoming zero.

@@ -62,7 +62,10 @@ export function validateState(state){
   if(state.budget!==undefined){keys(state.budget,['month','spent_usd','reserved_usd','warning_usd','limit_usd','status']);if(!/^\d{4}-\d{2}$/.test(state.budget.month)||!['ok','warning','blocked','unavailable'].includes(state.budget.status)||state.budget.warning_usd!==20||state.budget.limit_usd!==100)fail('Invalid monthly budget');for(const field of ['spent_usd','reserved_usd'])if(state.budget[field]!==null){number(state.budget[field]);if(state.budget[field]<0)fail('Negative measured spend')}}
   return state;
 }
-export const rankRows=rows=>[...rows].sort((a,b)=>b.cumulative_return-a.cumulative_return||IDS.indexOf(a.model_id)-IDS.indexOf(b.model_id));
+export const rankRows=rows=>[...rows].sort((a,b)=>
+  (a.sharpe_ratio===null)-(b.sharpe_ratio===null)||
+  (a.sharpe_ratio===null?0:b.sharpe_ratio-a.sharpe_ratio)||
+  IDS.indexOf(a.model_id)-IDS.indexOf(b.model_id));
 export const formatReturn=value=>`${value>0?'+':''}${(value*100).toFixed(2)}%`;
 export const formatSharpe=value=>value===null?'N/A':value.toFixed(2);
 export const formatDrawdown=value=>value===0?'0%':`${(value*100).toFixed(2)}%`;
