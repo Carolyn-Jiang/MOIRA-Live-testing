@@ -2,55 +2,55 @@
   "schema": "moira.live-testing.website/1",
   "status": "live",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-18T12:34:01.192288-05:00",
+  "updated_at": "2026-11-18T14:34:58.220710-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
     "final_settlement": "2027-05-24T10:30:00-04:00"
   },
   "next_release": {
-    "timestamp": "2026-11-18T14:30:00-05:00",
+    "timestamp": "2026-11-18T15:30:00-05:00",
     "session_label": "NYSE regular session",
     "note": "Next actual observation node; exchange holidays and overnight gaps follow the verified calendar."
   },
   "all_time": {
-    "completed_rounds": 74,
+    "completed_rounds": 75,
     "rows": [
       {
         "model_id": "codex",
-        "cumulative_return": 0.06654102468708589,
-        "sharpe_ratio": 0.07596691518099671,
+        "cumulative_return": 0.06671576083017472,
+        "sharpe_ratio": 0.07564052503605902,
         "max_drawdown": 0.04580535289316501
       },
       {
         "model_id": "moira2-top5",
-        "cumulative_return": 0.034096883101723874,
-        "sharpe_ratio": 0.11269774150905616,
+        "cumulative_return": 0.03570406603048881,
+        "sharpe_ratio": 0.11699317778675383,
         "max_drawdown": 0.02152383360328114
       },
       {
         "model_id": "moira2-top3",
-        "cumulative_return": 0.022629448410392827,
-        "sharpe_ratio": 0.07656491828406602,
+        "cumulative_return": 0.015544651755617034,
+        "sharpe_ratio": 0.05202275027390921,
         "max_drawdown": 0.022507482972418225
       },
       {
         "model_id": "moira2-top1",
-        "cumulative_return": 0.008910192222173263,
-        "sharpe_ratio": 0.03534557549743033,
+        "cumulative_return": 0.010478230250421383,
+        "sharpe_ratio": 0.0409143405297378,
         "max_drawdown": 0.022855033282319637
       },
       {
-        "model_id": "moira",
-        "cumulative_return": -0.024153060407653193,
-        "sharpe_ratio": -0.05001217348339513,
-        "max_drawdown": 0.0649524880372424
+        "model_id": "finmem",
+        "cumulative_return": -0.021853754641573908,
+        "sharpe_ratio": -0.07997056892718475,
+        "max_drawdown": 0.03880363817026966
       },
       {
-        "model_id": "finmem",
-        "cumulative_return": -0.0273261656678786,
-        "sharpe_ratio": -0.10338675754556745,
-        "max_drawdown": 0.03880363817026966
+        "model_id": "moira",
+        "cumulative_return": -0.030913746933886155,
+        "sharpe_ratio": -0.0641458623435156,
+        "max_drawdown": 0.0649524880372424
       }
     ],
     "series": [
@@ -356,6 +356,10 @@
           {
             "step": 74,
             "equity": 1.066541024687086
+          },
+          {
+            "step": 75,
+            "equity": 1.0667157608301747
           }
         ]
       },
@@ -661,6 +665,10 @@
           {
             "step": 74,
             "equity": 0.9726738343321214
+          },
+          {
+            "step": 75,
+            "equity": 0.9781462453584261
           }
         ]
       },
@@ -966,6 +974,10 @@
           {
             "step": 74,
             "equity": 0.9758469395923468
+          },
+          {
+            "step": 75,
+            "equity": 0.9690862530661138
           }
         ]
       },
@@ -1271,6 +1283,10 @@
           {
             "step": 74,
             "equity": 1.0089101922221733
+          },
+          {
+            "step": 75,
+            "equity": 1.0104782302504214
           }
         ]
       },
@@ -1576,6 +1592,10 @@
           {
             "step": 74,
             "equity": 1.0226294484103928
+          },
+          {
+            "step": 75,
+            "equity": 1.015544651755617
           }
         ]
       },
@@ -1881,6 +1901,10 @@
           {
             "step": 74,
             "equity": 1.0340968831017239
+          },
+          {
+            "step": 75,
+            "equity": 1.0357040660304888
           }
         ]
       }
@@ -4062,42 +4086,42 @@
       "label": "Week of 2026-11-16",
       "start": "2026-11-16T00:00:00-05:00",
       "end": "2026-11-23T00:00:00-05:00",
-      "completed_rounds": 16,
+      "completed_rounds": 17,
       "rows": [
         {
-          "model_id": "moira",
-          "cumulative_return": 0.01691963398983587,
-          "sharpe_ratio": 0.39289957765826883,
-          "max_drawdown": 0.003727632557892102
-        },
-        {
-          "model_id": "moira2-top3",
-          "cumulative_return": 0.011624319587767884,
-          "sharpe_ratio": 0.25870283900562047,
-          "max_drawdown": 0.005762715548887853
-        },
-        {
           "model_id": "moira2-top5",
-          "cumulative_return": 0.010872288079898373,
-          "sharpe_ratio": 0.22915946166699516,
+          "cumulative_return": 0.012443375577706473,
+          "sharpe_ratio": 0.25387367844651576,
           "max_drawdown": 0.008646560192636321
         },
         {
+          "model_id": "moira",
+          "cumulative_return": 0.009874395040120332,
+          "sharpe_ratio": 0.18016628508538812,
+          "max_drawdown": 0.008786776468365565
+        },
+        {
           "model_id": "moira2-top1",
-          "cumulative_return": 0.0067508944177596675,
-          "sharpe_ratio": 0.1407525861092462,
+          "cumulative_return": 0.008315576487174514,
+          "sharpe_ratio": 0.16736483473210637,
           "max_drawdown": 0.00864656019263621
         },
         {
+          "model_id": "moira2-top3",
+          "cumulative_return": 0.004615766678944144,
+          "sharpe_ratio": 0.08385517390914522,
+          "max_drawdown": 0.009683086714802891
+        },
+        {
           "model_id": "finmem",
-          "cumulative_return": -0.015950945395733274,
-          "sharpe_ratio": -0.35479436632578676,
+          "cumulative_return": -0.010414535648946233,
+          "sharpe_ratio": -0.1927861119724916,
           "max_drawdown": 0.015950945395733274
         },
         {
           "model_id": "codex",
-          "cumulative_return": -0.02937976772692863,
-          "sharpe_ratio": -0.3043006563471875,
+          "cumulative_return": -0.029220746712391388,
+          "sharpe_ratio": -0.29314349499975206,
           "max_drawdown": 0.02937976772692863
         }
       ],
@@ -4172,6 +4196,10 @@
             {
               "step": 16,
               "equity": 0.9706202322730714
+            },
+            {
+              "step": 17,
+              "equity": 0.9707792532876086
             }
           ]
         },
@@ -4245,6 +4273,10 @@
             {
               "step": 16,
               "equity": 0.9840490546042667
+            },
+            {
+              "step": 17,
+              "equity": 0.9895854643510538
             }
           ]
         },
@@ -4318,6 +4350,10 @@
             {
               "step": 16,
               "equity": 1.0169196339898359
+            },
+            {
+              "step": 17,
+              "equity": 1.0098743950401203
             }
           ]
         },
@@ -4391,6 +4427,10 @@
             {
               "step": 16,
               "equity": 1.0067508944177597
+            },
+            {
+              "step": 17,
+              "equity": 1.0083155764871745
             }
           ]
         },
@@ -4464,6 +4504,10 @@
             {
               "step": 16,
               "equity": 1.0116243195877679
+            },
+            {
+              "step": 17,
+              "equity": 1.0046157666789441
             }
           ]
         },
@@ -4537,6 +4581,10 @@
             {
               "step": 16,
               "equity": 1.0108722880798984
+            },
+            {
+              "step": 17,
+              "equity": 1.0124433755777065
             }
           ]
         }
@@ -4544,25 +4592,25 @@
       "tokens": [
         {
           "model_id": "codex",
-          "input_tokens": 364235,
+          "input_tokens": 377965,
           "cached_input_tokens": 0,
-          "output_tokens": 2098,
-          "total_tokens": 366333,
+          "output_tokens": 2146,
+          "total_tokens": 380111,
           "training_tokens": 0,
-          "inference_tokens": 366333,
+          "inference_tokens": 380111,
           "recorded_tokens": {
-            "input_tokens": 364235,
+            "input_tokens": 377965,
             "cached_input_tokens": 0,
-            "output_tokens": 2098,
-            "total_tokens": 366333,
+            "output_tokens": 2146,
+            "total_tokens": 380111,
             "training_tokens": 0,
-            "inference_tokens": 366333,
-            "direction_decision_tokens": 366333,
+            "inference_tokens": 380111,
+            "direction_decision_tokens": 380111,
             "pair_reselection_tokens": 0,
             "relationship_monitor_tokens": 0,
             "loo_attribution_tokens": 0,
             "other_inference_tokens": 0,
-            "trading_tokens": 366333
+            "trading_tokens": 380111
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4578,11 +4626,11 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 0.9315344999999999,
+          "estimated_cost_usd": 0.966338,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 366333,
-          "direction_decision_tokens": 366333,
+          "trading_tokens": 380111,
+          "direction_decision_tokens": 380111,
           "pair_reselection_tokens": 0,
           "relationship_monitor_tokens": 0,
           "loo_attribution_tokens": 0,
@@ -4590,25 +4638,25 @@
         },
         {
           "model_id": "finmem",
-          "input_tokens": 99818,
+          "input_tokens": 103577,
           "cached_input_tokens": 0,
-          "output_tokens": 3274,
-          "total_tokens": 103092,
+          "output_tokens": 3397,
+          "total_tokens": 106974,
           "training_tokens": 0,
-          "inference_tokens": 103092,
+          "inference_tokens": 106974,
           "recorded_tokens": {
-            "input_tokens": 99818,
+            "input_tokens": 103577,
             "cached_input_tokens": 0,
-            "output_tokens": 3274,
-            "total_tokens": 103092,
+            "output_tokens": 3397,
+            "total_tokens": 106974,
             "training_tokens": 0,
-            "inference_tokens": 103092,
-            "direction_decision_tokens": 78319,
+            "inference_tokens": 106974,
+            "direction_decision_tokens": 81448,
             "pair_reselection_tokens": 0,
             "relationship_monitor_tokens": 0,
             "loo_attribution_tokens": 0,
-            "other_inference_tokens": 24773,
-            "trading_tokens": 78319
+            "other_inference_tokens": 25526,
+            "trading_tokens": 81448
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4624,37 +4672,37 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 0.03847689,
+          "estimated_cost_usd": 0.03997398,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 78319,
-          "direction_decision_tokens": 78319,
+          "trading_tokens": 81448,
+          "direction_decision_tokens": 81448,
           "pair_reselection_tokens": 0,
           "relationship_monitor_tokens": 0,
           "loo_attribution_tokens": 0,
-          "other_inference_tokens": 24773
+          "other_inference_tokens": 25526
         },
         {
           "model_id": "moira",
-          "input_tokens": 1660517,
+          "input_tokens": 1668171,
           "cached_input_tokens": 129152,
-          "output_tokens": 95657,
-          "total_tokens": 1756174,
+          "output_tokens": 95935,
+          "total_tokens": 1764106,
           "training_tokens": 1580332,
-          "inference_tokens": 175842,
+          "inference_tokens": 183774,
           "recorded_tokens": {
-            "input_tokens": 1660517,
+            "input_tokens": 1668171,
             "cached_input_tokens": 129152,
-            "output_tokens": 95657,
-            "total_tokens": 1756174,
+            "output_tokens": 95935,
+            "total_tokens": 1764106,
             "training_tokens": 1580332,
-            "inference_tokens": 175842,
-            "direction_decision_tokens": 98400,
+            "inference_tokens": 183774,
+            "direction_decision_tokens": 103104,
             "pair_reselection_tokens": 11945,
-            "relationship_monitor_tokens": 65497,
+            "relationship_monitor_tokens": 68725,
             "loo_attribution_tokens": 0,
             "other_inference_tokens": 0,
-            "trading_tokens": 110345
+            "trading_tokens": 115049
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4670,37 +4718,37 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 0.7785124,
+          "estimated_cost_usd": 0.7820188,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 110345,
-          "direction_decision_tokens": 98400,
+          "trading_tokens": 115049,
+          "direction_decision_tokens": 103104,
           "pair_reselection_tokens": 11945,
-          "relationship_monitor_tokens": 65497,
+          "relationship_monitor_tokens": 68725,
           "loo_attribution_tokens": 0,
           "other_inference_tokens": 0
         },
         {
           "model_id": "moira2-top1",
-          "input_tokens": 4690843,
+          "input_tokens": 4710098,
           "cached_input_tokens": 162048,
-          "output_tokens": 290289,
-          "total_tokens": 4981132,
+          "output_tokens": 290798,
+          "total_tokens": 5000896,
           "training_tokens": 4599766,
-          "inference_tokens": 381366,
+          "inference_tokens": 401130,
           "recorded_tokens": {
-            "input_tokens": 4690843,
+            "input_tokens": 4710098,
             "cached_input_tokens": 162048,
-            "output_tokens": 290289,
-            "total_tokens": 4981132,
+            "output_tokens": 290798,
+            "total_tokens": 5000896,
             "training_tokens": 4599766,
-            "inference_tokens": 381366,
-            "direction_decision_tokens": 91036,
+            "inference_tokens": 401130,
+            "direction_decision_tokens": 95183,
             "pair_reselection_tokens": 11789,
-            "relationship_monitor_tokens": 66611,
-            "loo_attribution_tokens": 75330,
-            "other_inference_tokens": 136600,
-            "trading_tokens": 102825
+            "relationship_monitor_tokens": 69660,
+            "loo_attribution_tokens": 79102,
+            "other_inference_tokens": 145396,
+            "trading_tokens": 106972
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4716,37 +4764,37 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 2.11483921,
+          "estimated_cost_usd": 2.12098069,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 102825,
-          "direction_decision_tokens": 91036,
+          "trading_tokens": 106972,
+          "direction_decision_tokens": 95183,
           "pair_reselection_tokens": 11789,
-          "relationship_monitor_tokens": 66611,
-          "loo_attribution_tokens": 75330,
-          "other_inference_tokens": 136600
+          "relationship_monitor_tokens": 69660,
+          "loo_attribution_tokens": 79102,
+          "other_inference_tokens": 145396
         },
         {
           "model_id": "moira2-top3",
-          "input_tokens": 4468084,
+          "input_tokens": 4489387,
           "cached_input_tokens": 96128,
-          "output_tokens": 314308,
-          "total_tokens": 4782392,
+          "output_tokens": 314936,
+          "total_tokens": 4804323,
           "training_tokens": 4296084,
-          "inference_tokens": 486308,
+          "inference_tokens": 508239,
           "recorded_tokens": {
-            "input_tokens": 4468084,
+            "input_tokens": 4489387,
             "cached_input_tokens": 96128,
-            "output_tokens": 314308,
-            "total_tokens": 4782392,
+            "output_tokens": 314936,
+            "total_tokens": 4804323,
             "training_tokens": 4296084,
-            "inference_tokens": 486308,
-            "direction_decision_tokens": 107992,
+            "inference_tokens": 508239,
+            "direction_decision_tokens": 113109,
             "pair_reselection_tokens": 11795,
-            "relationship_monitor_tokens": 68396,
-            "loo_attribution_tokens": 223567,
-            "other_inference_tokens": 74558,
-            "trading_tokens": 119787
+            "relationship_monitor_tokens": 71775,
+            "loo_attribution_tokens": 228173,
+            "other_inference_tokens": 83387,
+            "trading_tokens": 124904
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4762,37 +4810,37 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 2.17498331,
+          "estimated_cost_usd": 2.18212548,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 119787,
-          "direction_decision_tokens": 107992,
+          "trading_tokens": 124904,
+          "direction_decision_tokens": 113109,
           "pair_reselection_tokens": 11795,
-          "relationship_monitor_tokens": 68396,
-          "loo_attribution_tokens": 223567,
-          "other_inference_tokens": 74558
+          "relationship_monitor_tokens": 71775,
+          "loo_attribution_tokens": 228173,
+          "other_inference_tokens": 83387
         },
         {
           "model_id": "moira2-top5",
-          "input_tokens": 7153251,
+          "input_tokens": 7172002,
           "cached_input_tokens": 115456,
-          "output_tokens": 481898,
-          "total_tokens": 7635149,
+          "output_tokens": 482784,
+          "total_tokens": 7654786,
           "training_tokens": 6956928,
-          "inference_tokens": 678221,
+          "inference_tokens": 697858,
           "recorded_tokens": {
-            "input_tokens": 7153251,
+            "input_tokens": 7172002,
             "cached_input_tokens": 115456,
-            "output_tokens": 481898,
-            "total_tokens": 7635149,
+            "output_tokens": 482784,
+            "total_tokens": 7654786,
             "training_tokens": 6956928,
-            "inference_tokens": 678221,
-            "direction_decision_tokens": 121756,
+            "inference_tokens": 697858,
+            "direction_decision_tokens": 127292,
             "pair_reselection_tokens": 11797,
-            "relationship_monitor_tokens": 66577,
-            "loo_attribution_tokens": 380323,
-            "other_inference_tokens": 97768,
-            "trading_tokens": 133553
+            "relationship_monitor_tokens": 69612,
+            "loo_attribution_tokens": 390722,
+            "other_inference_tokens": 98435,
+            "trading_tokens": 139089
           },
           "token_coverage": {
             "input_tokens": "complete",
@@ -4808,38 +4856,38 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 3.48190145,
+          "estimated_cost_usd": 3.49063936,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
-          "trading_tokens": 133553,
-          "direction_decision_tokens": 121756,
+          "trading_tokens": 139089,
+          "direction_decision_tokens": 127292,
           "pair_reselection_tokens": 11797,
-          "relationship_monitor_tokens": 66577,
-          "loo_attribution_tokens": 380323,
-          "other_inference_tokens": 97768
+          "relationship_monitor_tokens": 69612,
+          "loo_attribution_tokens": 390722,
+          "other_inference_tokens": 98435
         }
       ],
       "tokens_coverage": "complete",
       "shared_tokens": {
-        "input_tokens": 952039,
+        "input_tokens": 965013,
         "cached_input_tokens": 0,
-        "output_tokens": 101448,
-        "total_tokens": 1053487,
+        "output_tokens": 106049,
+        "total_tokens": 1071062,
         "training_tokens": 0,
-        "inference_tokens": 1053487
+        "inference_tokens": 1071062
       },
       "shared_tokens_coverage": "complete"
     }
   ],
   "data_status": {
-    "published_batches": 76,
+    "published_batches": 77,
     "expected_release_points": 830,
-    "last_release_at": "2026-11-18T12:30:00-05:00",
+    "last_release_at": "2026-11-18T14:30:00-05:00",
     "coverage": "partial"
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 41.06716813,
+    "spent_usd": 41.14154788,
     "reserved_usd": 0.17641449999999992,
     "warning_usd": 20,
     "limit_usd": 100,
