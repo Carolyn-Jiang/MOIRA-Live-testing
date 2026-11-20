@@ -40,7 +40,8 @@ def populated(count=2,missing_second=False):
 class ProjectionTests(unittest.TestCase):
     def test_ranking_uses_sharpe_with_negative_values_before_undefined_and_stable_ties(self):
         returns = [[.2,-.1],[.01,.011],[0.,0.],[-.01,-.02],[0.,.01],[0.,.01]]
-        histories = {model:[{"step_return":value} for value in values]
+        histories = {model:[{"step_return":value, "entry_at":C.action_window(C.release_nodes[i]).entry_at.isoformat(),
+                            "exit_at":C.action_window(C.release_nodes[i]).exit_at.isoformat()} for i,value in enumerate(values)]
             for model,values in zip(MODEL_IDS,returns)}
         original = copy.deepcopy(histories)
         view = _view(histories,range(2))
@@ -76,6 +77,26 @@ class ProjectionTests(unittest.TestCase):
             self.assertTrue(all(s["points"][0]=={"step":0,"equity":1.} and len(s["points"])==n+1 for s in week["series"]))
             self.assertAlmostEqual(week["rows"][0]["cumulative_return"],1.005**n-1)
             self.assertIsNone(week["rows"][0]["sharpe_ratio"])
+
+    def test_dates_are_actual_entry_and_exit_boundaries_including_cross_week_baseline(self):
+        book,asof=populated(count=30);original=copy.deepcopy(book)
+        feed=build_feed(book,asof=asof)
+        history=book["accounts"][MODEL_IDS[0]]["history"]
+        self.assertEqual(feed["all_time"]["timestamps"],
+            [history[0]["entry_at"],*(row["exit_at"] for row in history)])
+        for week in feed["weeks"]:
+            rows=[row for row in history if week["start"]<=row["exit_at"]<week["end"]]
+            self.assertEqual(week["timestamps"],[rows[0]["entry_at"],*(row["exit_at"] for row in rows)])
+        self.assertLess(feed["weeks"][1]["timestamps"][0],feed["weeks"][1]["start"])
+        self.assertEqual(book,original)
+
+    def test_dates_retain_holiday_half_day_and_dst_calendar_boundaries(self):
+        for release in ("2026-11-25T14:30:00-05:00","2026-11-27T11:30:00-05:00", "2027-03-12T14:30:00-05:00"):
+            window=C.action_window(datetime.fromisoformat(release))
+            histories={model:[{"step_return":.01,"entry_at":window.entry_at.isoformat(),"exit_at":window.exit_at.isoformat()}] for model in MODEL_IDS}
+            view=_view(histories,[0])
+            self.assertEqual(view["timestamps"],[window.entry_at.isoformat(),window.exit_at.isoformat()])
+        self.assertEqual(view["timestamps"],["2027-03-12T15:30:00-05:00","2027-03-15T09:30:00-04:00"])
 
     def test_future_availability_never_appears_in_earlier_snapshot(self):
         book,asof=populated()

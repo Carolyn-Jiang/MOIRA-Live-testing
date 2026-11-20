@@ -233,7 +233,13 @@ def _view(histories, indices):
     rows.sort(key=lambda row: (row["sharpe_ratio"] is None,
         -row["sharpe_ratio"] if row["sharpe_ratio"] is not None else 0,
         MODEL_IDS.index(row["model_id"])))
-    return {"completed_rounds": len(indices), "rows": rows, "series": series}
+    # The baseline is the actual entry of the first selected interval. In a
+    # weekly view that entry can precede the week (for example, Friday to Monday).
+    reference = histories[MODEL_IDS[0]]
+    timestamps = [aware(reference[indices[0]]["entry_at"]).isoformat(),
+                  *(aware(reference[i]["exit_at"]).isoformat() for i in indices)]
+    return {"completed_rounds": len(indices), "rows": rows, "series": series,
+            "timestamps": timestamps}
 
 
 def _public_releases(manifests, asof, calendar):
