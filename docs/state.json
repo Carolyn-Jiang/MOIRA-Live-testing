@@ -2,14 +2,14 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-25T11:45:44.585907-05:00",
+  "updated_at": "2026-11-25T12:31:20.127575-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
     "final_settlement": "2027-05-24T10:30:00-04:00"
   },
   "next_release": {
-    "timestamp": "2026-11-25T12:30:00-05:00",
+    "timestamp": "2026-11-25T14:30:00-05:00",
     "session_label": "NYSE regular session",
     "note": "Next actual observation node; exchange holidays and overnight gaps follow the verified calendar."
   },
@@ -6823,25 +6823,25 @@
       ],
       "tokens_coverage": "partial",
       "shared_tokens": {
-        "input_tokens": 1008624,
+        "input_tokens": 1015030,
         "cached_input_tokens": 0,
-        "output_tokens": 102300,
-        "total_tokens": 1110924,
+        "output_tokens": 104599,
+        "total_tokens": 1119629,
         "training_tokens": 0,
-        "inference_tokens": 1110924
+        "inference_tokens": 1119629
       },
       "shared_tokens_coverage": "complete"
     }
   ],
   "data_status": {
-    "published_batches": 105,
+    "published_batches": 106,
     "expected_release_points": 830,
-    "last_release_at": "2026-11-25T11:30:00-05:00",
+    "last_release_at": "2026-11-25T12:30:00-05:00",
     "coverage": "partial"
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 51.94305886,
+    "spent_usd": 51.94929966,
     "reserved_usd": 0.5299683000000002,
     "warning_usd": 20,
     "limit_usd": 100,
