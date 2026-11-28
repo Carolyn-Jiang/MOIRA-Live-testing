@@ -2,7 +2,7 @@
   "schema": "moira.live-testing.website/1",
   "status": "pending",
   "timezone": "America/New_York",
-  "updated_at": "2026-11-27T12:31:22.825196-05:00",
+  "updated_at": "2026-11-27T19:11:40.218769-05:00",
   "period": {
     "start": "2026-11-02T09:30:00-05:00",
     "last_release": "2027-05-21T15:30:00-04:00",
@@ -6592,24 +6592,24 @@
         },
         {
           "model_id": "finmem",
-          "input_tokens": 63613,
+          "input_tokens": 81258,
           "cached_input_tokens": 0,
-          "output_tokens": 2164,
-          "total_tokens": 65777,
+          "output_tokens": 2332,
+          "total_tokens": 83590,
           "training_tokens": 0,
-          "inference_tokens": 65777,
+          "inference_tokens": 83590,
           "recorded_tokens": {
-            "input_tokens": 63613,
+            "input_tokens": 81258,
             "cached_input_tokens": 0,
-            "output_tokens": 2164,
-            "total_tokens": 65777,
+            "output_tokens": 2332,
+            "total_tokens": 83590,
             "training_tokens": 0,
-            "inference_tokens": 65777,
+            "inference_tokens": 83590,
             "direction_decision_tokens": 51888,
             "pair_reselection_tokens": 0,
             "relationship_monitor_tokens": 0,
             "loo_attribution_tokens": 0,
-            "other_inference_tokens": 13889,
+            "other_inference_tokens": 31702,
             "trading_tokens": 51888
           },
           "token_coverage": {
@@ -6626,7 +6626,7 @@
             "other_inference_tokens": "complete",
             "trading_tokens": "complete"
           },
-          "estimated_cost_usd": 0.02515757,
+          "estimated_cost_usd": 0.03248437,
           "cost_coverage": "complete",
           "reserved_cost_usd": 0.0,
           "trading_tokens": 51888,
@@ -6634,7 +6634,7 @@
           "pair_reselection_tokens": 0,
           "relationship_monitor_tokens": 0,
           "loo_attribution_tokens": 0,
-          "other_inference_tokens": 13889
+          "other_inference_tokens": 31702
         },
         {
           "model_id": "moira",
@@ -6841,7 +6841,7 @@
   },
   "budget": {
     "month": "2026-11",
-    "spent_usd": 52.03122646,
+    "spent_usd": 52.03855326,
     "reserved_usd": 0.5299683000000002,
     "warning_usd": 20,
     "limit_usd": 100,
